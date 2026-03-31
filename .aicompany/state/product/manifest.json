@@ -3,7 +3,7 @@
   "service_name": "paperclipweb",
   "platform": "web",
   "slack_channel": "#ai-paperclipweb",
-  "current_stage": 5,
+  "current_stage": 6,
   "design_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/design/2026-03-31.md",
   "spec_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/specs/2026-03-31-paperclipweb.md",
   "pricing_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/pricing/2026-03-31-pricing.md",
