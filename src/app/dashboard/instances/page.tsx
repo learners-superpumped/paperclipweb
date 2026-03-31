@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   Zap,
   Globe,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
 import {
   trackInstanceCreated,
@@ -25,19 +27,31 @@ interface Instance {
   id: string;
   name: string;
   status: string;
+  paperclipCompanyId: string | null;
   instanceUrl: string | null;
   creditsUsed: number;
   createdAt: string;
 }
 
-const statusColors: Record<string, "accent" | "secondary" | "default" | "destructive"> = {
+const statusColors: Record<
+  string,
+  "accent" | "secondary" | "default" | "destructive"
+> = {
   running: "accent",
   stopped: "secondary",
   provisioning: "default",
   error: "destructive",
 };
 
+const statusLabels: Record<string, string> = {
+  running: "Running",
+  stopped: "Stopped",
+  provisioning: "Provisioning...",
+  error: "Error",
+};
+
 export default function InstancesPage() {
+  const router = useRouter();
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -60,7 +74,6 @@ export default function InstancesPage() {
   }, []);
 
   useEffect(() => {
-    // page_view handled by AnalyticsProvider
     fetchInstances();
   }, [fetchInstances]);
 
@@ -77,8 +90,9 @@ export default function InstancesPage() {
         body: JSON.stringify({ name: newName.trim() }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         setError(data.error || "Failed to create instance");
         setCreating(false);
         return;
@@ -88,6 +102,11 @@ export default function InstancesPage() {
       trackInstanceCreated(newName.trim(), isFirst);
       if (isFirst) {
         trackFirstInstanceCreated(newName.trim());
+      }
+
+      if (data.warning) {
+        // Demo mode warning
+        setError(data.warning);
       }
 
       setShowCreate(false);
@@ -101,10 +120,10 @@ export default function InstancesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this instance?")) return;
+    if (!confirm("Are you sure you want to delete this instance? This will archive the company in Paperclip.")) return;
 
     try {
-      const res = await fetch(`/api/companies?id=${id}`, {
+      const res = await fetch(`/api/companies/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -142,14 +161,17 @@ export default function InstancesPage() {
       />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-2 underline cursor-pointer"
-          >
-            Dismiss
-          </button>
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            {error}
+            <button
+              onClick={() => setError(null)}
+              className="ml-2 underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
@@ -163,7 +185,7 @@ export default function InstancesPage() {
             <form onSubmit={handleCreate} className="flex gap-3">
               <div className="flex-1">
                 <label htmlFor="instance-name" className="sr-only">
-                  Instance Name
+                  Company Name
                 </label>
                 <Input
                   id="instance-name"
@@ -192,7 +214,7 @@ export default function InstancesPage() {
               </Button>
             </form>
             <p className="mt-2 text-xs text-secondary-400">
-              Your instance will be ready in about 60 seconds.
+              A new Paperclip company will be created and ready to use.
             </p>
           </CardContent>
         </Card>
@@ -217,17 +239,30 @@ export default function InstancesPage() {
                         <h3 className="text-sm font-semibold text-secondary-800">
                           {instance.name}
                         </h3>
-                        <Badge variant={statusColors[instance.status] ?? "secondary"}>
-                          {instance.status}
+                        <Badge
+                          variant={
+                            statusColors[instance.status] ?? "secondary"
+                          }
+                        >
+                          {statusLabels[instance.status] ?? instance.status}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
                         {instance.instanceUrl && (
                           <span className="flex items-center gap-1 text-xs text-secondary-400">
                             <Globe className="h-3 w-3" />
-                            {instance.instanceUrl.replace("https://", "")}
+                            {instance.instanceUrl
+                              .replace("https://", "")
+                              .replace("http://", "")}
                           </span>
                         )}
+                        {!instance.instanceUrl &&
+                          instance.status === "provisioning" && (
+                            <span className="flex items-center gap-1 text-xs text-secondary-400">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Setting up...
+                            </span>
+                          )}
                         <span className="flex items-center gap-1 text-xs text-secondary-400">
                           <Zap className="h-3 w-3" />
                           {instance.creditsUsed} credits used
@@ -238,16 +273,35 @@ export default function InstancesPage() {
 
                   <div className="flex items-center gap-2">
                     {instance.status === "running" && instance.instanceUrl && (
-                      <a
-                        href={instance.instanceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <ExternalLink className="h-3 w-3" />
-                          Open
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/instances/${instance.id}`
+                            )
+                          }
+                        >
+                          <Server className="h-3 w-3" />
+                          Manage
                         </Button>
-                      </a>
+                        <a
+                          href={instance.instanceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open
+                          </Button>
+                        </a>
+                      </>
                     )}
                     <Button
                       variant="ghost"

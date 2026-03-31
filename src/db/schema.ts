@@ -100,6 +100,7 @@ export const companies = paperclipwebSchema.table(
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     status: text("status").notNull().default("provisioning"), // provisioning, running, stopped, error
+    paperclipCompanyId: text("paperclip_company_id"), // ID in the Paperclip instance
     paperclipVersion: text("paperclip_version").default("latest"),
     instanceUrl: text("instance_url"),
     creditsUsed: integer("credits_used").notNull().default(0),

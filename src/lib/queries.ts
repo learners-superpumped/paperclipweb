@@ -53,16 +53,37 @@ export async function getCompanyById(id: string) {
 export async function createCompany(data: {
   userId: string;
   name: string;
+  paperclipCompanyId?: string;
+  instanceUrl?: string;
+  status?: string;
 }) {
   const result = await db()
     .insert(companies)
     .values({
       userId: data.userId,
       name: data.name,
-      status: "provisioning",
+      paperclipCompanyId: data.paperclipCompanyId,
+      instanceUrl: data.instanceUrl,
+      status: data.status ?? "provisioning",
     })
     .returning();
   return result[0];
+}
+
+export async function updateCompany(
+  id: string,
+  data: Partial<{
+    name: string;
+    status: string;
+    instanceUrl: string;
+    paperclipCompanyId: string;
+  }>
+) {
+  return db()
+    .update(companies)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(companies.id, id))
+    .returning();
 }
 
 export async function deleteCompany(id: string, userId: string) {

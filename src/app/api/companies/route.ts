@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { getCompaniesByUser, createCompany, getUserCredits, updateCompanyStatus } from "@/lib/queries";
+import { getCompaniesByUser, createCompany, getUserCredits } from "@/lib/queries";
 import { PLANS } from "@/lib/constants";
+import {
+  isPaperclipConfigured,
+  createPaperclipCompany,
+  getPaperclipCompanyUrl,
+} from "@/lib/paperclip";
 
 const CreateCompanySchema = z.object({
   name: z.string().min(1).max(100),
@@ -50,28 +55,56 @@ export async function POST(req: Request) {
 
     if (existingCompanies.length >= maxCompanies) {
       return NextResponse.json(
-        { error: `Your ${plan} plan allows up to ${maxCompanies} instance(s). Please upgrade to create more.` },
+        {
+          error: `Your ${plan} plan allows up to ${maxCompanies} instance(s). Please upgrade to create more.`,
+        },
         { status: 403 }
       );
     }
 
-    const company = await createCompany({
-      userId: user.id,
-      name: parsed.data.name,
-    });
+    const companyName = parsed.data.name;
 
-    // Simulate provisioning -> running after creation (MVP: instant)
-    if (company) {
-      setTimeout(async () => {
-        try {
-          await updateCompanyStatus(company.id, "running");
-        } catch {
-          // Ignore - will be provisioning status
-        }
-      }, 3000);
+    // If Paperclip is configured, create a real company
+    if (isPaperclipConfigured()) {
+      const pcCompany = await createPaperclipCompany(
+        companyName,
+        `Managed instance for ${user.email ?? "user"}`
+      );
+
+      if (!pcCompany) {
+        return NextResponse.json(
+          { error: "Failed to provision Paperclip instance. Please try again." },
+          { status: 502 }
+        );
+      }
+
+      const instanceUrl = getPaperclipCompanyUrl(pcCompany.id);
+
+      const company = await createCompany({
+        userId: user.id,
+        name: companyName,
+        paperclipCompanyId: pcCompany.id,
+        instanceUrl,
+        status: "running",
+      });
+
+      return NextResponse.json({ company }, { status: 201 });
     }
 
-    return NextResponse.json({ company }, { status: 201 });
+    // Paperclip not configured — demo mode
+    const company = await createCompany({
+      userId: user.id,
+      name: companyName,
+      status: "provisioning",
+    });
+
+    return NextResponse.json(
+      {
+        company,
+        warning: "Paperclip instance not configured. Running in demo mode.",
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("[API] POST /api/companies error:", error);
     return NextResponse.json(
