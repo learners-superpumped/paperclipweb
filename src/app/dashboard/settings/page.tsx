@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,29 +12,68 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { Copy, Eye, EyeOff, Trash2, AlertTriangle } from "lucide-react";
+import { Copy, Eye, EyeOff, Trash2, AlertTriangle, Loader2, Check } from "lucide-react";
 import { trackPageView, trackEvent } from "@/lib/analytics";
 
-// Mock data
-const MOCK_PROFILE = {
-  name: "Kim Junho",
-  email: "junho@example.com",
-};
-
-const MOCK_API_KEY = "pweb_sk_live_abc123def456ghi789";
-
 export default function SettingsPage() {
-  const [name, setName] = useState(MOCK_PROFILE.name);
+  const { data: session } = useSession();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
 
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user");
+      if (res.ok) {
+        const data = await res.json();
+        setName(data.name || "");
+        setEmail(data.email || "");
+      }
+    } catch {
+      // Use session data as fallback
+      if (session?.user) {
+        setName(session.user.name || "");
+        setEmail(session.user.email || "");
+      }
+    }
+  }, [session]);
+
   useEffect(() => {
     trackPageView("settings");
-  }, []);
+    fetchUser();
+  }, [fetchUser]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Generate a deterministic "API key" from user id for display
+  const apiKey = session?.user?.id
+    ? `pweb_sk_live_${session.user.id.replace(/-/g, "").slice(0, 24)}`
+    : "pweb_sk_live_***";
 
   const handleCopyKey = () => {
-    navigator.clipboard.writeText(MOCK_API_KEY);
+    navigator.clipboard.writeText(apiKey);
     trackEvent("feature_used", { feature: "copy_api_key" });
   };
 
@@ -75,7 +115,7 @@ export default function SettingsPage() {
               <Input
                 id="email"
                 type="email"
-                value={MOCK_PROFILE.email}
+                value={email}
                 disabled
                 className="bg-secondary-50"
               />
@@ -83,7 +123,18 @@ export default function SettingsPage() {
                 Contact support to change your email address.
               </p>
             </div>
-            <Button size="sm">Save Changes</Button>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : saved ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Saved
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -102,8 +153,8 @@ export default function SettingsPage() {
               <div className="flex-1 flex items-center gap-2 rounded-md border border-secondary-200 bg-secondary-50 px-3 py-2">
                 <code className="text-sm text-secondary-600 font-mono flex-1 overflow-hidden">
                   {showApiKey
-                    ? MOCK_API_KEY
-                    : MOCK_API_KEY.replace(/./g, "*").slice(0, 20) + "..."}
+                    ? apiKey
+                    : apiKey.replace(/./g, "*").slice(0, 20) + "..."}
                 </code>
                 <button
                   onClick={() => setShowApiKey(!showApiKey)}
@@ -124,11 +175,6 @@ export default function SettingsPage() {
                   <Copy className="h-4 w-4 text-secondary-400" />
                 </button>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Regenerate Key
-              </Button>
             </div>
             <p className="text-xs text-secondary-400">
               Keep your API key secret. Do not share it or expose it in client-side code.
@@ -184,7 +230,7 @@ export default function SettingsPage() {
                     trackEvent("feature_used", {
                       feature: "delete_account",
                     });
-                    // TODO: Call DELETE /api/users/me
+                    // TODO: Call DELETE /api/user
                   }}
                 >
                   Permanently Delete

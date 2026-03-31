@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,67 +14,111 @@ import {
   Loader2,
   Zap,
   Globe,
+  Trash2,
 } from "lucide-react";
 import { trackPageView, trackEvent } from "@/lib/analytics";
 
-// Mock data
-const MOCK_INSTANCES = [
-  {
-    id: "1",
-    name: "CS Bot",
-    status: "running" as const,
-    url: "https://cs-bot.paperclipweb.app",
-    creditsUsed: 180,
-    createdAt: "2026-03-15",
-  },
-  {
-    id: "2",
-    name: "Content Generator",
-    status: "running" as const,
-    url: "https://content-gen.paperclipweb.app",
-    creditsUsed: 95,
-    createdAt: "2026-03-20",
-  },
-  {
-    id: "3",
-    name: "Data Analyzer",
-    status: "stopped" as const,
-    url: "https://data-analyzer.paperclipweb.app",
-    creditsUsed: 65,
-    createdAt: "2026-03-22",
-  },
-];
+interface Instance {
+  id: string;
+  name: string;
+  status: string;
+  instanceUrl: string | null;
+  creditsUsed: number;
+  createdAt: string;
+}
 
-const statusColors = {
+const statusColors: Record<string, "accent" | "secondary" | "default" | "destructive"> = {
   running: "accent",
   stopped: "secondary",
   provisioning: "default",
   error: "destructive",
-} as const;
+};
 
 export default function InstancesPage() {
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInstances = useCallback(async () => {
+    try {
+      const res = await fetch("/api/companies");
+      if (res.ok) {
+        const json = await res.json();
+        setInstances(json.companies ?? []);
+      }
+    } catch {
+      // Keep empty state
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     trackPageView("instances");
-  }, []);
+    fetchInstances();
+  }, [fetchInstances]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
     setCreating(true);
+    setError(null);
+
     trackEvent("feature_used", {
       feature: "create_instance",
       instance_name: newName,
     });
-    // TODO: Call POST /api/companies
-    await new Promise((r) => setTimeout(r, 2000));
-    setCreating(false);
-    setShowCreate(false);
-    setNewName("");
+
+    try {
+      const res = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to create instance");
+        setCreating(false);
+        return;
+      }
+
+      setShowCreate(false);
+      setNewName("");
+      // Refetch instances
+      await fetchInstances();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setCreating(false);
+    }
   };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this instance?")) return;
+
+    try {
+      const res = await fetch(`/api/companies?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        await fetchInstances();
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -92,6 +136,18 @@ export default function InstancesPage() {
           </Button>
         }
       />
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive">
+          {error}
+          <button
+            onClick={() => setError(null)}
+            className="ml-2 underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Create new instance */}
       {showCreate && (
@@ -117,7 +173,7 @@ export default function InstancesPage() {
                 {creating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Provisioning...
+                    Creating...
                   </>
                 ) : (
                   "Create"
@@ -139,66 +195,71 @@ export default function InstancesPage() {
       )}
 
       {/* Instance list */}
-      <div className="space-y-4">
-        {MOCK_INSTANCES.map((instance) => (
-          <Card
-            key={instance.id}
-            className="hover:shadow-md transition-shadow duration-200 cursor-pointer"
-          >
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
-                    <Server className="h-5 w-5 text-primary" />
+      {instances.length > 0 ? (
+        <div className="space-y-4">
+          {instances.map((instance) => (
+            <Card
+              key={instance.id}
+              className="hover:shadow-md transition-shadow duration-200"
+            >
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
+                      <Server className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-secondary-800">
+                          {instance.name}
+                        </h3>
+                        <Badge variant={statusColors[instance.status] ?? "secondary"}>
+                          {instance.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        {instance.instanceUrl && (
+                          <span className="flex items-center gap-1 text-xs text-secondary-400">
+                            <Globe className="h-3 w-3" />
+                            {instance.instanceUrl.replace("https://", "")}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 text-xs text-secondary-400">
+                          <Zap className="h-3 w-3" />
+                          {instance.creditsUsed} credits used
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-secondary-800">
-                        {instance.name}
-                      </h3>
-                      <Badge
-                        variant={statusColors[instance.status]}
+
+                  <div className="flex items-center gap-2">
+                    {instance.status === "running" && instance.instanceUrl && (
+                      <a
+                        href={instance.instanceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        {instance.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="flex items-center gap-1 text-xs text-secondary-400">
-                        <Globe className="h-3 w-3" />
-                        {instance.url.replace("https://", "")}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-secondary-400">
-                        <Zap className="h-3 w-3" />
-                        {instance.creditsUsed} credits used
-                      </span>
-                    </div>
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <ExternalLink className="h-3 w-3" />
+                          Open
+                        </Button>
+                      </a>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-secondary-400 hover:text-destructive"
+                      onClick={() => handleDelete(instance.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {instance.status === "running" && (
-                    <a
-                      href={instance.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <ExternalLink className="h-3 w-3" />
-                        Open
-                      </Button>
-                    </a>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {MOCK_INSTANCES.length === 0 && (
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
         <Card className="py-16 text-center">
           <CardContent>
             <Server className="h-12 w-12 text-secondary-300 mx-auto mb-4" />

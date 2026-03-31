@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,34 +9,83 @@ import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { UsageChart } from "@/components/dashboard/usage-chart";
-import { Server, Zap, Activity, Plus, ArrowUpRight } from "lucide-react";
+import { Server, Zap, Activity, Plus, ArrowUpRight, Loader2 } from "lucide-react";
 import { trackPageView, trackEvent } from "@/lib/analytics";
+import { PLANS } from "@/lib/constants";
 
-// Mock data
-const MOCK_USER = {
-  plan: "starter",
-  creditsUsed: 340,
-  creditsTotal: 1000,
-  instances: [
-    { id: "1", name: "CS Bot", status: "running" },
-    { id: "2", name: "Content Gen", status: "running" },
-  ],
-  actionsToday: 42,
+interface DashboardData {
+  plan: string;
+  creditsUsed: number;
+  creditsTotal: number;
+  creditsBalance: number;
+  activeInstances: number;
+  actionsToday: number;
+  instances: Array<{
+    id: string;
+    name: string;
+    status: string;
+    creditsUsed: number;
+    createdAt: string;
+  }>;
+}
+
+const FALLBACK: DashboardData = {
+  plan: "free",
+  creditsUsed: 0,
+  creditsTotal: 100,
+  creditsBalance: 100,
+  instances: [],
+  activeInstances: 0,
+  actionsToday: 0,
+};
+
+const statusColors: Record<string, "accent" | "secondary" | "default" | "destructive"> = {
+  running: "accent",
+  stopped: "secondary",
+  provisioning: "default",
+  error: "destructive",
 };
 
 export default function DashboardPage() {
-  useEffect(() => {
-    trackPageView("dashboard");
+  const [data, setData] = useState<DashboardData>(FALLBACK);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard");
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch {
+      // Use fallback
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const creditPercent = (MOCK_USER.creditsUsed / MOCK_USER.creditsTotal) * 100;
+  useEffect(() => {
+    trackPageView("dashboard");
+    fetchData();
+  }, [fetchData]);
+
+  const planConfig = PLANS[data.plan as keyof typeof PLANS] ?? PLANS.free;
+  const maxCompanies = planConfig.companies;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
       <DashboardHeader
         title="Dashboard"
         description="Monitor your Paperclip instances and usage"
-        plan={MOCK_USER.plan}
+        plan={data.plan}
         actions={
           <Link href="/dashboard/instances">
             <Button
@@ -57,21 +106,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
           label="Active Instances"
-          value={MOCK_USER.instances.length}
-          sublabel={`of 3 allowed`}
+          value={data.activeInstances}
+          sublabel={`of ${maxCompanies} allowed`}
           icon={Server}
         />
         <StatCard
           label="Credits Used"
-          value={`${MOCK_USER.creditsUsed} / ${MOCK_USER.creditsTotal}`}
+          value={`${data.creditsUsed} / ${data.creditsTotal}`}
           sublabel="this month"
           icon={Zap}
         />
         <StatCard
           label="Actions Today"
-          value={MOCK_USER.actionsToday}
+          value={data.actionsToday}
           icon={Activity}
-          trend={{ value: 12, label: "vs yesterday" }}
         />
       </div>
 
@@ -84,7 +132,7 @@ export default function DashboardPage() {
                 Monthly Credit Usage
               </p>
               <p className="text-xs text-secondary-400">
-                {MOCK_USER.creditsUsed} of {MOCK_USER.creditsTotal} credits used
+                {data.creditsUsed} of {data.creditsTotal} credits used
               </p>
             </div>
             <Link href="/dashboard/billing">
@@ -94,10 +142,9 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </div>
-          <Progress value={MOCK_USER.creditsUsed} max={MOCK_USER.creditsTotal} />
+          <Progress value={data.creditsUsed} max={data.creditsTotal} />
           <p className="mt-2 text-xs text-secondary-400">
-            {MOCK_USER.creditsTotal - MOCK_USER.creditsUsed} credits remaining.
-            Resets on Apr 1.
+            {data.creditsBalance} credits remaining
           </p>
         </CardContent>
       </Card>
@@ -119,29 +166,44 @@ export default function DashboardPage() {
           </Link>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {MOCK_USER.instances.map((instance) => (
-              <div
-                key={instance.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-secondary-100 hover:border-secondary-200 transition-colors duration-150 cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-md bg-primary-50 flex items-center justify-center">
-                    <Server className="h-4 w-4 text-primary" />
+          {data.instances.length === 0 ? (
+            <div className="text-center py-8">
+              <Server className="h-10 w-10 text-secondary-300 mx-auto mb-3" />
+              <p className="text-sm text-secondary-500">No instances yet</p>
+              <Link href="/dashboard/instances">
+                <Button size="sm" className="mt-3 gap-1">
+                  <Plus className="h-4 w-4" />
+                  Create your first instance
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {data.instances.slice(0, 5).map((instance) => (
+                <div
+                  key={instance.id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-secondary-100 hover:border-secondary-200 transition-colors duration-150 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-md bg-primary-50 flex items-center justify-center">
+                      <Server className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-secondary-800">
+                        {instance.name}
+                      </p>
+                      <p className="text-xs text-secondary-400">
+                        {instance.creditsUsed} credits used
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-secondary-800">
-                      {instance.name}
-                    </p>
-                    <p className="text-xs text-secondary-400">
-                      instance-{instance.id}
-                    </p>
-                  </div>
+                  <Badge variant={statusColors[instance.status] ?? "secondary"}>
+                    {instance.status}
+                  </Badge>
                 </div>
-                <Badge variant="accent">{instance.status}</Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </>
