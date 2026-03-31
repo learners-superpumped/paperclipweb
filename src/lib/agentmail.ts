@@ -60,6 +60,33 @@ export async function sendMagicLinkEmail(to: string, url: string) {
   });
 }
 
+export async function sendCreditLowEmail(to: string, creditsRemaining: number, creditsLimit: number) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://paperclipweb.app";
+  const percent = Math.round((creditsRemaining / creditsLimit) * 100);
+
+  return sendEmail({
+    to,
+    subject: `[paperclipweb] Credits running low (${percent}% remaining)`,
+    body: `
+      <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your credits are running low</h2>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+          You have <strong>${creditsRemaining} of ${creditsLimit}</strong> credits remaining this month (${percent}%).
+        </p>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+          Top up your credits or upgrade your plan to keep your agents running smoothly.
+        </p>
+        <a href="${appUrl}/dashboard/billing" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Top Up Credits
+        </a>
+        <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
+          You can manage your subscription at ${appUrl}/dashboard/billing
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendWelcomeEmail(to: string, name?: string) {
   return sendEmail({
     to,
