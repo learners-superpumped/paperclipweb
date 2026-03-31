@@ -1,0 +1,49 @@
+{
+  "service": "paperclipweb",
+  "slack_channel": "#ai-paperclipweb",
+  "slack_channel_id": "C0APSUSRRCK",
+  "deploy_url": "https://paperclipweb-learners.vercel.app",
+  "amplitude_project": "AINATIVE",
+  "amplitude_project_id": 790840,
+  "amplitude_dashboard_id": "7mny7rvg",
+  "amplitude_dashboard_url": "https://app.amplitude.com/analytics/teamlearners/dashboard/7mny7rvg",
+  "db_connection": "DATABASE_URL env var (Neon PostgreSQL)",
+  "db_schema": "paperclipweb",
+  "queries_dir": ".aicompany/state/product/queries/",
+  "report_schedule": {
+    "daily": "09:00 KST",
+    "weekly": "Monday 09:00 KST",
+    "monthly": "1st 09:00 KST"
+  },
+  "metrics": {
+    "primary": ["DAU", "signups", "paid_users", "MRR"],
+    "secondary": ["credit_usage", "churn_rate", "conversion_rate"]
+  },
+  "targets": {
+    "1w": { "visitors": 125, "signups": 30, "paid": 3 },
+    "1m": { "visitors": 3000, "signups": 200, "paid": 20, "mrr": 500 },
+    "3m": { "visitors": 15000, "signups": 1000, "paid": 80, "mrr": 3000 }
+  },
+  "kill_criteria": {
+    "1w": "visitors < 50 AND signups < 5",
+    "1m": "paid < 3 AND MRR < $57",
+    "3m": "signups < 200 OR paid < 15 OR MRR < $285 OR growth < 5%"
+  },
+  "bep": {
+    "paid_users": 25,
+    "estimated_mrr": 418
+  },
+  "pricing": {
+    "free": { "price": 0, "credits": 100 },
+    "starter": { "price": 19, "credits": 1000 },
+    "pro": { "price": 49, "credits": 3000 }
+  },
+  "payment_alerts": {
+    "enabled": true,
+    "channel": "#ai-paperclipweb",
+    "channel_id": "C0APSUSRRCK",
+    "events": ["checkout.session.completed", "customer.subscription.deleted"]
+  },
+  "hypotheses": ["VH1", "VH2", "GH1", "GH2"],
+  "github_repo": "https://github.com/learners-superpumped/paperclipweb"
+}
