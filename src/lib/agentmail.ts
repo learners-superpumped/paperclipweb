@@ -16,16 +16,16 @@ export async function sendEmail({ to, subject, body, bodyType = "html" }: SendEm
     return null;
   }
 
-  const response = await fetch(`${AGENTMAIL_API_URL}/inboxes/${encodeURIComponent(fromAddress)}/messages`, {
+  const response = await fetch(`${AGENTMAIL_API_URL}/inboxes/${encodeURIComponent(fromAddress)}/messages/send`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      to: [{ email: to }],
+      to: [to],
       subject,
-      [bodyType === "html" ? "html_body" : "text_body"]: body,
+      [bodyType === "html" ? "html" : "text"]: body,
     }),
   });
 
