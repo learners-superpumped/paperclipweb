@@ -15,10 +15,10 @@ export function Pricing() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <h2 className="text-3xl font-bold text-secondary-800 sm:text-4xl">
-            단순한 가격, 투명한 과금
+            Simple, Transparent Pricing
           </h2>
           <p className="mt-4 text-lg text-secondary-500">
-            숨겨진 비용 없이, 필요한 만큼만
+            No hidden fees. Pay only for what you need.
           </p>
         </div>
 

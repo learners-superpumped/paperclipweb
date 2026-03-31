@@ -5,21 +5,21 @@ import { Receipt, Rocket, CreditCard } from "lucide-react";
 const features = [
   {
     icon: Receipt,
-    title: "원빌링",
+    title: "One Bill",
     description:
-      "인프라 + AI 크레딧을 하나의 구독으로 통합. Anthropic, OpenAI에 따로 결제하지 마세요.",
+      "Infrastructure + AI credits in one subscription. Stop paying Anthropic and OpenAI separately.",
   },
   {
     icon: Rocket,
-    title: "60초 배포",
+    title: "Deploy in 60s",
     description:
-      "가입 즉시 Paperclip 인스턴스 생성. 서버 설정, Docker, SSL 모두 필요 없습니다.",
+      "Spin up a Paperclip instance the moment you sign up. No server config, Docker, or SSL needed.",
   },
   {
     icon: CreditCard,
-    title: "무료 시작",
+    title: "Start Free",
     description:
-      "신용카드 없이 100 크레딧으로 시작. 써보고 마음에 들면 업그레이드하세요.",
+      "Start with 100 credits, no credit card required. Upgrade when you're ready.",
   },
 ];
 
@@ -29,10 +29,10 @@ export function Features() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <h2 className="text-3xl font-bold text-secondary-800 sm:text-4xl">
-            왜 paperclipweb인가요?
+            Why paperclipweb?
           </h2>
           <p className="mt-4 text-lg text-secondary-500">
-            Railway + API 키 관리의 복잡함을 하나로 단순화합니다
+            We simplify the complexity of Railway + API key management into one platform
           </p>
         </div>
 

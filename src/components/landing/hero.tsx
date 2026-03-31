@@ -17,14 +17,14 @@ export function Hero() {
           </Badge>
 
           <h1 className="text-4xl font-bold tracking-tight text-secondary-800 sm:text-5xl lg:text-6xl text-balance">
-            AI 회사,{" "}
-            <span className="text-primary">바로 시작</span>
+            Launch Your AI Company{" "}
+            <span className="text-primary">Instantly</span>
           </h1>
 
           <p className="mt-6 text-lg text-secondary-500 sm:text-xl max-w-2xl mx-auto text-balance leading-relaxed">
-            API 키 없이, 청구서 하나로 Paperclip을 운영하세요.
+            Run your AI company with one bill. No API keys needed.
             <br className="hidden sm:block" />
-            번들 크레딧으로 에이전트를 바로 실행합니다.
+            Start running agents instantly with bundled credits.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -32,9 +32,9 @@ export function Hero() {
               <Button
                 size="xl"
                 className="w-full sm:w-auto gap-2"
-                onClick={() => trackCTAClick("무료로 시작하기", "hero")}
+                onClick={() => trackCTAClick("get_started_free", "hero")}
               >
-                무료로 시작하기
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -45,13 +45,13 @@ export function Hero() {
                 className="w-full sm:w-auto"
                 onClick={() => trackPricingView("hero_cta")}
               >
-                요금제 보기
+                View Pricing
               </Button>
             </a>
           </div>
 
           <p className="mt-4 text-sm text-secondary-400">
-            신용카드 없이 시작 -- 무료 100 크레딧 포함
+            No credit card required -- 100 free credits included
           </p>
         </div>
 

@@ -12,11 +12,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "paperclipweb - AI 회사, 바로 시작",
+    default: "paperclipweb - Run your AI company with one bill",
     template: "%s | paperclipweb",
   },
   description:
-    "API 키 없이, 청구서 하나로 Paperclip을 운영하세요. 번들 크레딧 포함 원클릭 Paperclip 호스팅.",
+    "Run your AI company with one bill. One-click Paperclip hosting with bundled credits included.",
   keywords: [
     "paperclip",
     "AI hosting",
@@ -30,14 +30,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "paperclipweb - One bill. One click. Your AI company.",
     description:
-      "API 키 없이, 청구서 하나로 Paperclip을 운영하세요. 번들 크레딧 포함 원클릭 Paperclip 호스팅.",
+      "Run your AI company with one bill. One-click Paperclip hosting with bundled credits included.",
     type: "website",
     siteName: "paperclipweb",
   },
   twitter: {
     card: "summary_large_image",
     title: "paperclipweb - One bill. One click. Your AI company.",
-    description: "API 키 없이, 청구서 하나로 Paperclip을 운영하세요.",
+    description: "Run your AI company with one bill. One-click Paperclip hosting with bundled credits.",
   },
   robots: {
     index: true,
@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={inter.variable}>
+    <html lang="en" className={inter.variable}>
       <body className="font-sans">
         <SessionProvider>
           <AnalyticsProvider>{children}</AnalyticsProvider>
