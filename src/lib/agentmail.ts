@@ -1,4 +1,4 @@
-const AGENTMAIL_API_URL = "https://api.agentmail.to/v1";
+const AGENTMAIL_API_URL = "https://api.agentmail.to/v0";
 
 interface SendEmailParams {
   to: string;
