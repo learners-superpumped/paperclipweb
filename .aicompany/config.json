@@ -1,0 +1,9 @@
+{
+  "project": "paperclipweb",
+  "slack_channel": "#ai-paperclipweb",
+  "modules": {
+    "product": { "enabled": true },
+    "threads": { "enabled": true },
+    "outbound": { "enabled": true }
+  }
+}

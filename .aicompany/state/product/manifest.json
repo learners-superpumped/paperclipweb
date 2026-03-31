@@ -1,0 +1,92 @@
+{
+  "idea": "Paperclip 오픈소스 AI 에이전트 오케스트레이션 플랫폼의 호스팅 웹 래퍼. Stripe 구독 + 토큰 사용량 기반 하이브리드 과금.",
+  "service_name": "paperclipweb",
+  "platform": "web",
+  "slack_channel": "#ai-paperclipweb",
+  "current_stage": 5,
+  "design_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/design/2026-03-31.md",
+  "spec_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/specs/2026-03-31-paperclipweb.md",
+  "pricing_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/pricing/2026-03-31-pricing.md",
+  "projection_file": "/Users/nevermind/slaves/paperclipweb/.aicompany/state/product/projection-summary.md",
+  "hypotheses": {
+    "VH1": {
+      "status": "inconclusive",
+      "statement": "사용자가 BYOK 대신 번들 크레딧(원빌링)을 선호한다",
+      "metrics": { "1w": "가입 30명", "1m": "가입 200명", "3m": "가입 1,000명" }
+    },
+    "VH2": {
+      "status": "inconclusive",
+      "statement": "셀프호스팅($5 Railway) 대비 관리형 서비스에 프리미엄($19/mo)을 지불한다",
+      "metrics": { "1w": "유료 전환 3명 (10%)", "1m": "유료 전환 20명 (10%)", "3m": "유료 전환 80명 (8%)" }
+    },
+    "GH1": {
+      "status": "inconclusive",
+      "statement": "Paperclip 오픈소스 커뮤니티(GitHub, Discord)에서 자연 유입된다",
+      "metrics": { "1w": "방문 500명", "1m": "방문 3,000명", "3m": "방문 15,000명" }
+    },
+    "GH2": {
+      "status": "inconclusive",
+      "statement": "무료 티어 사용자가 SNS/커뮤니티에 자발적으로 공유한다",
+      "metrics": { "1w": "공유 5건", "1m": "공유율 8%", "3m": "공유율 15%" }
+    }
+  },
+  "pricing": {
+    "free": { "price": 0, "credits": 100, "companies": 1 },
+    "starter": { "price": 19, "credits": 1000, "companies": 3, "overage": 0.03 },
+    "pro": { "price": 49, "credits": 3000, "companies": 10, "overage": 0.025 }
+  },
+  "unit_economics": {
+    "cost_per_action_optimized": 0.008,
+    "cost_per_action_raw": 0.014,
+    "free_user_avg_cost": 0.72,
+    "starter_margin_pct": 37.6,
+    "pro_margin_pct": 39.3,
+    "bep_paid_users": 25
+  },
+  "projection": {
+    "conservative_som": 17100,
+    "funnel": {
+      "visit_to_signup": 0.06,
+      "signup_to_active": 0.30,
+      "active_to_paid": 0.10,
+      "starter_ratio": 0.80,
+      "monthly_churn_paid": 0.15
+    },
+    "weekly_assumptions": {
+      "initial_visitors": 125,
+      "weekly_growth": 0.08
+    },
+    "bep_month": 4,
+    "m3_conservative": {
+      "paid_users": 4,
+      "mrr": 106
+    },
+    "m6_conservative": {
+      "paid_users": 15,
+      "mrr": 375
+    },
+    "kill_criteria": {
+      "1w": "visitors < 50 AND signups < 5",
+      "1m": "paid < 3 AND MRR < $57",
+      "3m": "signups < 200 OR paid < 15 OR MRR < $285 OR growth < 5%"
+    },
+    "top_drivers": ["weekly_visitors", "signup_conversion", "paid_conversion", "churn_rate", "share_rate"]
+  },
+  "updated_at": "2026-04-01T00:00:00Z",
+  "drive_path": "agent_space:/aicompany/paperclipweb",
+  "drive_folders": {
+    "research": "01_Research",
+    "spec": "02_Spec",
+    "design": "03_Design",
+    "projection": "04_Projection",
+    "qa": "05_QA",
+    "reports": "06_Reports"
+  },
+  "master_sheet_id": "1xy-b_OCJOcJf7wauFoq1jhEBRyi6kfX-0KxkGKSgl-M",
+  "master_sheet_url": "https://docs.google.com/spreadsheets/d/1xy-b_OCJOcJf7wauFoq1jhEBRyi6kfX-0KxkGKSgl-M/edit",
+  "github_repo": "https://github.com/learners-superpumped/paperclipweb",
+  "vercel_project": "paperclipweb",
+  "vercel_team": "learners",
+  "vercel_team_id": "team_Dw4JLudX9zXXTMS70ObrPATx",
+  "slack_channel_id": "C0APSUSRRCK"
+}
