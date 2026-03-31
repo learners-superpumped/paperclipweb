@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Server,
@@ -85,6 +86,7 @@ export function Sidebar() {
 
       <div className="p-2 border-t border-secondary-100">
         <button
+          onClick={() => signOut({ callbackUrl: "/" })}
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-md text-sm text-secondary-500 hover:text-secondary-800 hover:bg-secondary-50 w-full transition-colors duration-150 cursor-pointer",
           )}

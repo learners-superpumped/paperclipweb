@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     trackPageView("signup");
@@ -21,16 +23,32 @@ export default function SignupPage() {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    setError(null);
     trackEvent("signup_completed", { method: "magic_link" });
-    // TODO: Call /api/auth/signup
-    await new Promise((r) => setTimeout(r, 1000));
-    setSent(true);
-    setLoading(false);
+
+    try {
+      const result = await signIn("email", {
+        email,
+        redirect: false,
+        callbackUrl: "/dashboard",
+      });
+
+      if (result?.error) {
+        setError("Failed to send verification email. Please try again.");
+        setLoading(false);
+      } else {
+        setSent(true);
+        setLoading(false);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   const handleSocialSignup = (provider: "github" | "google") => {
     trackEvent("signup_completed", { method: provider });
-    // TODO: Call NextAuth signIn(provider)
+    signIn(provider, { callbackUrl: "/dashboard" });
   };
 
   return (
@@ -50,6 +68,12 @@ export default function SignupPage() {
             Start running your AI company in 60 seconds
           </p>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         {sent ? (
           <div className="rounded-xl border border-secondary-200 bg-white p-8 text-center">
