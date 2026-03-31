@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { users, companies, creditTransactions, subscriptions } from "@/db/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
+import { sendCreditLowEmail } from "@/lib/agentmail";
 
 // ─── User Queries ───
 
@@ -101,7 +102,19 @@ export async function addCreditTransaction(data: {
   type: string;
   description?: string;
   companyId?: string;
-}) {
+  provider?: string;
+  model?: string;
+  tokensInput?: number;
+  tokensOutput?: number;
+}): Promise<{ success: boolean; error?: string }> {
+  // For deductions (negative amount), check sufficient balance
+  if (data.amount < 0) {
+    const userCredits = await getUserCredits(data.userId);
+    if (userCredits.balance < Math.abs(data.amount)) {
+      return { success: false, error: "Insufficient credits" };
+    }
+  }
+
   // Insert transaction
   await db().insert(creditTransactions).values({
     userId: data.userId,
@@ -109,6 +122,10 @@ export async function addCreditTransaction(data: {
     type: data.type,
     description: data.description,
     companyId: data.companyId,
+    provider: data.provider,
+    model: data.model,
+    tokensInput: data.tokensInput,
+    tokensOutput: data.tokensOutput,
   });
 
   // Update user balance
@@ -119,6 +136,24 @@ export async function addCreditTransaction(data: {
       updatedAt: new Date(),
     })
     .where(eq(users.id, data.userId));
+
+  // Check if credits are low (< 10% of limit) and send warning email
+  if (data.amount < 0) {
+    try {
+      const updated = await getUserCredits(data.userId);
+      const threshold = Math.floor(updated.limit * 0.1);
+      if (updated.balance > 0 && updated.balance <= threshold) {
+        const user = await getUserById(data.userId);
+        if (user?.email) {
+          await sendCreditLowEmail(user.email, updated.balance, updated.limit);
+        }
+      }
+    } catch (err) {
+      console.error("[Credits] Failed to send low credit email:", err);
+    }
+  }
+
+  return { success: true };
 }
 
 export async function getRecentTransactions(userId: string, limit = 20) {
@@ -128,6 +163,24 @@ export async function getRecentTransactions(userId: string, limit = 20) {
     .where(eq(creditTransactions.userId, userId))
     .orderBy(desc(creditTransactions.createdAt))
     .limit(limit);
+}
+
+export async function getUsageByCompany(companyId: string, userId: string) {
+  return db()
+    .select()
+    .from(creditTransactions)
+    .where(
+      and(
+        eq(creditTransactions.companyId, companyId),
+        eq(creditTransactions.userId, userId),
+        eq(creditTransactions.type, "usage")
+      )
+    )
+    .orderBy(desc(creditTransactions.createdAt));
+}
+
+export async function deleteUser(userId: string) {
+  return db().delete(users).where(eq(users.id, userId));
 }
 
 // ─── Subscription Queries ───

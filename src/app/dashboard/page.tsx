@@ -10,7 +10,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { UsageChart } from "@/components/dashboard/usage-chart";
 import { Server, Zap, Activity, Plus, ArrowUpRight, Loader2 } from "lucide-react";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import { trackDashboardViewed } from "@/lib/analytics";
 import { PLANS } from "@/lib/constants";
 
 interface DashboardData {
@@ -65,7 +65,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    trackPageView("dashboard");
+    // page_view handled by AnalyticsProvider; also fire named dashboard_viewed
+    trackDashboardViewed();
     fetchData();
   }, [fetchData]);
 
@@ -88,13 +89,7 @@ export default function DashboardPage() {
         plan={data.plan}
         actions={
           <Link href="/dashboard/instances">
-            <Button
-              size="sm"
-              className="gap-1"
-              onClick={() =>
-                trackEvent("feature_used", { feature: "create_instance" })
-              }
-            >
+            <Button size="sm" className="gap-1">
               <Plus className="h-4 w-4" />
               New Instance
             </Button>

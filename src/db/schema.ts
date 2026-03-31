@@ -125,6 +125,10 @@ export const creditTransactions = paperclipwebSchema.table(
     amount: integer("amount").notNull(), // positive = credit, negative = debit
     type: text("type").notNull(), // grant, subscription, usage, topup
     description: text("description"),
+    provider: text("provider"), // anthropic, openai
+    model: text("model"), // claude-sonnet-4-20250514, gpt-4o, etc.
+    tokensInput: integer("tokens_input"),
+    tokensOutput: integer("tokens_output"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

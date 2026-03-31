@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip, ArrowLeft, Mail, Loader2 } from "lucide-react";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import { trackEvent } from "@/lib/analytics";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,7 +17,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    trackPageView("login");
+    // page_view handled by AnalyticsProvider
     const errorParam = searchParams.get("error");
     if (errorParam) {
       setError("Authentication failed. Please try again.");

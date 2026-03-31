@@ -1,36 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { getCompaniesByUser, createCompany, deleteCompany, getUserCredits, updateCompanyStatus } from "@/lib/queries";
+import { getCompaniesByUser, createCompany, getUserCredits, updateCompanyStatus } from "@/lib/queries";
 import { PLANS } from "@/lib/constants";
 
 const CreateCompanySchema = z.object({
   name: z.string().min(1).max(100),
 });
-
-export async function DELETE(req: Request) {
-  try {
-    const user = await getAuthUser();
-    if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
-    }
-
-    await deleteCompany(id, user.id);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[API] DELETE /api/companies error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
 
 export async function GET() {
   try {

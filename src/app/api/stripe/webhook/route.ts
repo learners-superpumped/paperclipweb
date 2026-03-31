@@ -6,7 +6,19 @@ import { users, subscriptions, invoices } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { addCreditTransaction } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
+import {
+  trackServerCheckoutCompleted,
+  trackServerCreditsToppedUp,
+  trackServerSubscriptionCanceled,
+} from "@/lib/analytics-server";
 import type Stripe from "stripe";
+
+// Plan prices for server-side event properties
+const PLAN_PRICES: Record<string, number> = {
+  free: 0,
+  starter: 19,
+  pro: 49,
+};
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -40,12 +52,14 @@ export async function POST(req: Request) {
         const plan = session.metadata?.plan;
         const topupPackage = session.metadata?.topupPackage;
         const topupCredits = session.metadata?.credits;
+        const topupPrice = session.metadata?.price;
 
         if (!userId) break;
 
         if (plan && session.subscription) {
           // Subscription checkout completed
           const planCredits = PLAN_CREDITS[plan] ?? PLAN_CREDITS.free;
+          const price = PLAN_PRICES[plan] ?? 0;
 
           // Create subscription record
           await db().insert(subscriptions).values({
@@ -77,12 +91,21 @@ export async function POST(req: Request) {
             description: `${plan} plan activated - ${planCredits.balance} credits`,
           });
 
+          // Amplitude: checkout_completed
+          await trackServerCheckoutCompleted(
+            userId,
+            plan,
+            price,
+            session.subscription as string
+          );
+
           await notifySlack(
-            `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${plan === "starter" ? "19" : "49"}/mo`
+            `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
           );
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed
           const credits = parseInt(topupCredits, 10);
+          const price = topupPrice ? parseFloat(topupPrice) : 0;
 
           await addCreditTransaction({
             userId,
@@ -90,6 +113,9 @@ export async function POST(req: Request) {
             type: "topup",
             description: `Top-up ${topupPackage}: +${credits} credits`,
           });
+
+          // Amplitude: credits_topped_up
+          await trackServerCreditsToppedUp(userId, topupPackage, credits, price);
 
           await notifySlack(
             `[paperclipweb] Credit top-up! User: ${userId}, Package: ${topupPackage}, Credits: ${credits}`
@@ -155,6 +181,8 @@ export async function POST(req: Request) {
         const user = userResult[0];
         if (!user) break;
 
+        const previousPlan = user.plan;
+
         // Downgrade to free
         const freeCredits = PLAN_CREDITS.free;
         await db()
@@ -173,8 +201,11 @@ export async function POST(req: Request) {
           .set({ status: "canceled" })
           .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
 
+        // Amplitude: subscription_cancel
+        await trackServerSubscriptionCanceled(user.id, previousPlan);
+
         await notifySlack(
-          `[paperclipweb] Subscription canceled. User: ${user.id}, Previous plan: ${user.plan}`
+          `[paperclipweb] Subscription canceled. User: ${user.id}, Previous plan: ${previousPlan}`
         );
         break;
       }

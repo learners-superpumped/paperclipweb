@@ -91,6 +91,8 @@ export async function POST(req: Request) {
           type: "topup",
           topupPackage: parsed.data.topup,
           credits: String(pkg.credits),
+          // price in dollars for Amplitude event
+          price: String(pkg.price / 100),
         },
       });
 

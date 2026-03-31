@@ -16,7 +16,11 @@ import { Progress } from "@/components/ui/progress";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Check, Zap, Loader2 } from "lucide-react";
 import { PLANS, TOPUP_PACKAGES } from "@/lib/constants";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import {
+  trackBillingViewed,
+  trackPricingView,
+  trackCheckoutStarted,
+} from "@/lib/analytics";
 
 interface BillingData {
   plan: string;
@@ -49,8 +53,9 @@ function BillingContent() {
   }, []);
 
   useEffect(() => {
-    trackPageView("billing");
-    trackEvent("pricing_viewed", { source: "billing_page" });
+    // page_view handled by AnalyticsProvider
+    trackBillingViewed();
+    trackPricingView("billing_page");
     fetchData();
   }, [fetchData]);
 
@@ -59,7 +64,8 @@ function BillingContent() {
 
   const handleCheckout = async (plan: "starter" | "pro") => {
     setCheckoutLoading(plan);
-    trackEvent("checkout_started", { plan });
+    const price = PLANS[plan]?.price ?? 0;
+    trackCheckoutStarted(plan, price, "subscription");
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -77,7 +83,8 @@ function BillingContent() {
 
   const handleTopup = async (pkg: string) => {
     setCheckoutLoading(`topup-${pkg}`);
-    trackEvent("checkout_started", { action: "topup", package: pkg });
+    const pkgData = TOPUP_PACKAGES.find((p) => p.name.toLowerCase() === pkg);
+    trackCheckoutStarted(pkg, pkgData?.price ?? 0, "topup");
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

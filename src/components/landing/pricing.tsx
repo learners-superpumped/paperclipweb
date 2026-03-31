@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { PLANS } from "@/lib/constants";
-import { trackEvent } from "@/lib/analytics";
+import { trackCTAClick } from "@/lib/analytics";
 
 export function Pricing() {
   const plans = Object.entries(PLANS);
@@ -70,7 +70,7 @@ export function Pricing() {
                   variant={plan.popular ? "default" : "outline"}
                   className="w-full"
                   onClick={() =>
-                    trackEvent("checkout_started", { plan: key })
+                    trackCTAClick(`pricing_${key}`, "landing_pricing")
                   }
                 >
                   {plan.cta}

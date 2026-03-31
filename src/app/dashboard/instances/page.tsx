@@ -10,13 +10,16 @@ import {
   Server,
   Plus,
   ExternalLink,
-  MoreVertical,
   Loader2,
   Zap,
   Globe,
   Trash2,
 } from "lucide-react";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import {
+  trackInstanceCreated,
+  trackFirstInstanceCreated,
+  trackInstanceDeleted,
+} from "@/lib/analytics";
 
 interface Instance {
   id: string;
@@ -57,7 +60,7 @@ export default function InstancesPage() {
   }, []);
 
   useEffect(() => {
-    trackPageView("instances");
+    // page_view handled by AnalyticsProvider
     fetchInstances();
   }, [fetchInstances]);
 
@@ -66,11 +69,6 @@ export default function InstancesPage() {
     if (!newName.trim()) return;
     setCreating(true);
     setError(null);
-
-    trackEvent("feature_used", {
-      feature: "create_instance",
-      instance_name: newName,
-    });
 
     try {
       const res = await fetch("/api/companies", {
@@ -86,9 +84,14 @@ export default function InstancesPage() {
         return;
       }
 
+      const isFirst = instances.length === 0;
+      trackInstanceCreated(newName.trim(), isFirst);
+      if (isFirst) {
+        trackFirstInstanceCreated(newName.trim());
+      }
+
       setShowCreate(false);
       setNewName("");
-      // Refetch instances
       await fetchInstances();
     } catch {
       setError("Network error. Please try again.");
@@ -105,6 +108,7 @@ export default function InstancesPage() {
         method: "DELETE",
       });
       if (res.ok) {
+        trackInstanceDeleted(id);
         await fetchInstances();
       }
     } catch {

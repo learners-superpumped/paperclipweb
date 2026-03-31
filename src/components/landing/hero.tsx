@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Zap } from "lucide-react";
-import { trackEvent } from "@/lib/analytics";
+import { trackCTAClick, trackPricingView } from "@/lib/analytics";
 
 export function Hero() {
   return (
@@ -32,7 +32,7 @@ export function Hero() {
               <Button
                 size="xl"
                 className="w-full sm:w-auto gap-2"
-                onClick={() => trackEvent("signup_started", { source: "hero" })}
+                onClick={() => trackCTAClick("무료로 시작하기", "hero")}
               >
                 무료로 시작하기
                 <ArrowRight className="h-4 w-4" />
@@ -43,9 +43,7 @@ export function Hero() {
                 variant="outline"
                 size="xl"
                 className="w-full sm:w-auto"
-                onClick={() =>
-                  trackEvent("pricing_viewed", { source: "hero_cta" })
-                }
+                onClick={() => trackPricingView("hero_cta")}
               >
                 요금제 보기
               </Button>

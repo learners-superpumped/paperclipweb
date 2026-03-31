@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Copy, Eye, EyeOff, Trash2, AlertTriangle, Loader2, Check } from "lucide-react";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import { trackSettingsUpdated, trackEvent } from "@/lib/analytics";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -43,7 +43,7 @@ export default function SettingsPage() {
   }, [session]);
 
   useEffect(() => {
-    trackPageView("settings");
+    // page_view handled by AnalyticsProvider
     fetchUser();
   }, [fetchUser]);
 
@@ -57,6 +57,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ name }),
       });
       if (res.ok) {
+        trackSettingsUpdated("name");
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
@@ -226,11 +227,18 @@ export default function SettingsPage() {
                   variant="destructive"
                   size="sm"
                   disabled={deleteInput !== "delete my account"}
-                  onClick={() => {
+                  onClick={async () => {
                     trackEvent("feature_used", {
                       feature: "delete_account",
                     });
-                    // TODO: Call DELETE /api/user
+                    try {
+                      const res = await fetch("/api/user", { method: "DELETE" });
+                      if (res.ok) {
+                        window.location.href = "/";
+                      }
+                    } catch (err) {
+                      console.error("Failed to delete account:", err);
+                    }
                   }}
                 >
                   Permanently Delete

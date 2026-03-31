@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip, ArrowLeft, Mail, Loader2, Check } from "lucide-react";
-import { trackPageView, trackEvent } from "@/lib/analytics";
+import {
+  trackSignupStarted,
+  trackSignupCompleted,
+} from "@/lib/analytics";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -14,9 +17,10 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Page view is handled by AnalyticsProvider.
+  // Fire signup_started on mount — user intentionally navigated to signup.
   useEffect(() => {
-    trackPageView("signup");
-    trackEvent("signup_started", { source: "page" });
+    trackSignupStarted("email");
   }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -24,7 +28,6 @@ export default function SignupPage() {
     if (!email) return;
     setLoading(true);
     setError(null);
-    trackEvent("signup_completed", { method: "magic_link" });
 
     try {
       const result = await signIn("email", {
@@ -37,6 +40,8 @@ export default function SignupPage() {
         setError("Failed to send verification email. Please try again.");
         setLoading(false);
       } else {
+        // Magic link sent — treat this as signup completed (email method)
+        trackSignupCompleted("email");
         setSent(true);
         setLoading(false);
       }
@@ -47,7 +52,8 @@ export default function SignupPage() {
   };
 
   const handleSocialSignup = (provider: "github" | "google") => {
-    trackEvent("signup_completed", { method: provider });
+    trackSignupStarted(provider);
+    trackSignupCompleted(provider);
     signIn(provider, { callbackUrl: "/dashboard" });
   };
 
