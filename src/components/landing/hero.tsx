@@ -28,13 +28,13 @@ export function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup">
+            <Link href="/onboarding">
               <Button
                 size="xl"
                 className="w-full sm:w-auto gap-2"
-                onClick={() => trackCTAClick("get_started_free", "hero")}
+                onClick={() => trackCTAClick("start_ai_company", "hero")}
               >
-                Get Started Free
+                Start My AI Company
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
