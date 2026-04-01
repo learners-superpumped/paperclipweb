@@ -17,7 +17,7 @@ const authConfig: NextAuthConfig = {
   },
   pages: {
     signIn: "/login",
-    newUser: "/dashboard",
+    newUser: "/onboarding/redirect",
     verifyRequest: "/login",
   },
   providers: [

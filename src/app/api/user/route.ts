@@ -27,6 +27,7 @@ export async function GET() {
       creditsBalance: user.creditsBalance,
       creditsLimit: user.creditsLimit,
       createdAt: user.createdAt,
+      onboardingData: user.onboardingData,
     });
   } catch (error) {
     console.error("[API] GET /api/user error:", error);
