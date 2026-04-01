@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, companies, creditTransactions, subscriptions } from "@/db/schema";
+import { users, companies, creditTransactions, subscriptions, dripEmails } from "@/db/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { sendCreditLowEmail } from "@/lib/agentmail";
 
@@ -218,6 +218,57 @@ export async function getActiveSubscription(userId: string) {
     )
     .limit(1);
   return result[0] ?? null;
+}
+
+// ─── Drip Email Queries ───
+
+export async function scheduleDripEmails(userId: string) {
+  const now = new Date();
+  const emails = [0, 1, 2, 3].map((day) => ({
+    userId,
+    day,
+    status: "pending" as const,
+    scheduledAt: new Date(now.getTime() + day * 24 * 60 * 60 * 1000),
+  }));
+
+  await db().insert(dripEmails).values(emails);
+}
+
+export async function getPendingDripEmails(limit = 50) {
+  return db()
+    .select({
+      drip: dripEmails,
+      user: {
+        id: users.id,
+        email: users.email,
+        plan: users.plan,
+        onboardingData: users.onboardingData,
+      },
+    })
+    .from(dripEmails)
+    .innerJoin(users, eq(dripEmails.userId, users.id))
+    .where(
+      and(
+        eq(dripEmails.status, "pending"),
+        sql`${dripEmails.scheduledAt} <= now()`
+      )
+    )
+    .orderBy(dripEmails.scheduledAt)
+    .limit(limit);
+}
+
+export async function markDripSent(id: string) {
+  return db()
+    .update(dripEmails)
+    .set({ status: "sent", sentAt: new Date() })
+    .where(eq(dripEmails.id, id));
+}
+
+export async function markDripSkipped(id: string) {
+  return db()
+    .update(dripEmails)
+    .set({ status: "skipped" })
+    .where(eq(dripEmails.id, id));
 }
 
 // ─── Dashboard Stats ───
