@@ -25,6 +25,8 @@ export const users = paperclipwebSchema.table("users", {
   emailVerified: timestamp("email_verified", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  onboardingData: text("onboarding_data"), // JSON string: { idea, target, valueProp, competitors }
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
 });
 
 // ─── Sessions (for NextAuth) ───
@@ -153,5 +155,25 @@ export const invoices = paperclipwebSchema.table(
   },
   (table) => [
     index("invoices_user_idx").on(table.userId),
+  ]
+);
+
+// ─── Drip Emails ───
+export const dripEmails = paperclipwebSchema.table(
+  "drip_emails",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    day: integer("day").notNull(), // 0, 1, 2, 3
+    status: text("status").notNull().default("pending"), // pending, sent, skipped
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("drip_emails_user_idx").on(table.userId),
+    index("drip_emails_status_idx").on(table.status, table.scheduledAt),
   ]
 );
