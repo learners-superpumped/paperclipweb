@@ -93,8 +93,10 @@ async function paperclipFetch(
 
   const url = `${PAPERCLIP_API_URL.replace(/\/+$/, "")}${path}`;
 
+  const baseUrl = PAPERCLIP_API_URL.replace(/\/+$/, "");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    Origin: baseUrl,
   };
 
   if (PAPERCLIP_API_KEY) {
