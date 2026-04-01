@@ -4,6 +4,53 @@ import { z } from "zod";
 
 const PAPERCLIP_API_URL = process.env.PAPERCLIP_API_URL ?? "";
 const PAPERCLIP_API_KEY = process.env.PAPERCLIP_API_KEY ?? "";
+const PAPERCLIP_AUTH_EMAIL = process.env.PAPERCLIP_AUTH_EMAIL ?? "";
+const PAPERCLIP_AUTH_PASSWORD = process.env.PAPERCLIP_AUTH_PASSWORD ?? "";
+
+// ─── Session Token Cache ───
+
+let cachedSessionCookie: string | null = null;
+let sessionExpiresAt = 0;
+
+async function getPaperclipSessionCookie(): Promise<string | null> {
+  if (!PAPERCLIP_AUTH_EMAIL || !PAPERCLIP_AUTH_PASSWORD) return null;
+  if (cachedSessionCookie && Date.now() < sessionExpiresAt) return cachedSessionCookie;
+
+  const baseUrl = PAPERCLIP_API_URL.replace(/\/+$/, "");
+  const res = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: baseUrl },
+    body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
+  });
+
+  if (!res.ok) {
+    console.error("[Paperclip] Session auth failed:", res.status);
+    return null;
+  }
+
+  // Extract set-cookie header for session
+  const setCookie = res.headers.getSetCookie?.() ?? [];
+  const sessionCookie = setCookie
+    .map((c) => c.split(";")[0])
+    .filter((c) => c.startsWith("better-auth") || c.startsWith("paperclip"))
+    .join("; ");
+
+  if (sessionCookie) {
+    cachedSessionCookie = sessionCookie;
+    sessionExpiresAt = Date.now() + 55 * 60 * 1000; // refresh every 55 min
+    return sessionCookie;
+  }
+
+  // Fallback: some versions return all cookies
+  const allCookies = setCookie.map((c) => c.split(";")[0]).join("; ");
+  if (allCookies) {
+    cachedSessionCookie = allCookies;
+    sessionExpiresAt = Date.now() + 55 * 60 * 1000;
+    return allCookies;
+  }
+
+  return null;
+}
 
 /**
  * Whether the Paperclip backend is configured.
@@ -11,7 +58,11 @@ const PAPERCLIP_API_KEY = process.env.PAPERCLIP_API_KEY ?? "";
  * but no real Paperclip company is provisioned.
  */
 export function isPaperclipConfigured(): boolean {
-  return PAPERCLIP_API_URL.length > 0 && PAPERCLIP_API_KEY.length > 0;
+  // Configured if we have URL + (API key OR email/password auth)
+  return PAPERCLIP_API_URL.length > 0 && (
+    PAPERCLIP_API_KEY.length > 0 ||
+    (PAPERCLIP_AUTH_EMAIL.length > 0 && PAPERCLIP_AUTH_PASSWORD.length > 0)
+  );
 }
 
 // ─── Response Schemas (Zod) ───
@@ -37,16 +88,28 @@ async function paperclipFetch(
   options: RequestInit = {}
 ): Promise<Response> {
   if (!isPaperclipConfigured()) {
-    throw new Error("Paperclip is not configured. Set PAPERCLIP_API_URL and PAPERCLIP_API_KEY.");
+    throw new Error("Paperclip is not configured. Set PAPERCLIP_API_URL and PAPERCLIP_API_KEY, or PAPERCLIP_AUTH_EMAIL and PAPERCLIP_AUTH_PASSWORD.");
   }
 
   const url = `${PAPERCLIP_API_URL.replace(/\/+$/, "")}${path}`;
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (PAPERCLIP_API_KEY) {
+    headers.Authorization = `Bearer ${PAPERCLIP_API_KEY}`;
+  } else {
+    const cookie = await getPaperclipSessionCookie();
+    if (cookie) {
+      headers.Cookie = cookie;
+    }
+  }
+
   const res = await fetch(url, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${PAPERCLIP_API_KEY}`,
+      ...headers,
       ...options.headers,
     },
   });
