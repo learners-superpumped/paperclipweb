@@ -4,7 +4,7 @@ import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
 import { users, subscriptions, invoices } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { addCreditTransaction } from "@/lib/queries";
+import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
 import {
   trackServerCheckoutCompleted,
@@ -102,6 +102,22 @@ export async function POST(req: Request) {
           await notifySlack(
             `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
           );
+
+          // Auto-provision instance from onboarding data
+          const paidUser = await getUserById(userId);
+          if (paidUser?.onboardingData) {
+            try {
+              const obData = JSON.parse(paidUser.onboardingData);
+              const companyName = obData.idea.slice(0, 50);
+              await createCompany({
+                userId,
+                name: companyName,
+                status: "provisioning",
+              });
+            } catch (err) {
+              console.error("[Webhook] Failed to auto-provision:", err);
+            }
+          }
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed
           const credits = parseInt(topupCredits, 10);
