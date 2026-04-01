@@ -61,6 +61,39 @@ export const trackSignupStarted = (method: "email" | "github" | "google") =>
 export const trackSignupCompleted = (method: "email" | "github" | "google") =>
   trackEvent("signup_completed", { method });
 
+// --- Onboarding funnel (new flow) ---
+
+export const trackOnboardingStarted = () =>
+  trackEvent("onboarding_started", {});
+
+export const trackOnboardingStepCompleted = (
+  step: number,
+  field: string,
+  skipped?: boolean
+) =>
+  trackEvent("onboarding_step_completed", { step, field, skipped: skipped ?? false });
+
+export const trackOnboardingConfirmed = () =>
+  trackEvent("onboarding_confirmed", {});
+
+export const trackOnboardingLoadingStarted = () =>
+  trackEvent("onboarding_loading_started", {});
+
+export const trackOnboardingLoadingCompleted = () =>
+  trackEvent("onboarding_loading_completed", {});
+
+export const trackOnboardingLoadingAbandoned = (elapsedSeconds: number) =>
+  trackEvent("onboarding_loading_abandoned", { elapsed_seconds: elapsedSeconds });
+
+export const trackPlanSelected = (plan: string, source: string) =>
+  trackEvent("plan_selected", { plan, source });
+
+export const trackMagicLinkVerified = (redirect: string) =>
+  trackEvent("magic_link_verified", { redirect });
+
+export const trackDripEmailClicked = (day: number) =>
+  trackEvent("drip_email_clicked", { day });
+
 // --- Instance lifecycle ---
 
 /** Every instance creation */
