@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "paperclip hosting",
     "AI company",
   ],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://paperclipweb.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app"),
   openGraph: {
     title: "paperclipweb - One bill. One click. Your AI company.",
     description:
