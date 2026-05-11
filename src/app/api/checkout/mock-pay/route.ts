@@ -9,6 +9,7 @@ import {
   mockCompanies,
   subscriptions,
   creditTransactions,
+  tasks,
 } from "@/db/schema";
 import { findCase } from "@/lib/cases";
 import { sendEmail } from "@/lib/agentmail";
@@ -25,6 +26,15 @@ function makeSlug(name: string): string {
   const rand = Math.random().toString(36).slice(2, 6);
   return `${base}-${rand}`;
 }
+
+type MockPayload = {
+  employees?: unknown;
+  sampleTask?: {
+    title?: string;
+    description?: string;
+    presetResult?: string;
+  };
+};
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -89,9 +99,12 @@ export async function POST(req: Request) {
   const caseId = mock?.caseId ?? parsed.caseId ?? "ai-blog-seo";
   const template = findCase(caseId);
   const companyName = mock?.companyName ?? template?.company ?? "AI Company";
+  const mockPayload = mock?.payloadJson
+    ? (JSON.parse(mock.payloadJson) as MockPayload)
+    : null;
   const employeesJson =
-    mock?.payloadJson
-      ? (JSON.parse(mock.payloadJson) as { employees?: unknown }).employees ?? null
+    mockPayload
+      ? mockPayload.employees ?? null
       : template?.employees ?? null;
   const slug = makeSlug(companyName);
 
@@ -136,6 +149,24 @@ export async function POST(req: Request) {
     type: "subscription",
     description: "Pro 구독 결제 (mock) — 100 액션 충전",
   });
+
+  const firstTask = mockPayload?.sampleTask ?? template?.sampleTask;
+  const firstTaskResult =
+    mock?.firstTaskResult ?? firstTask?.presetResult ?? template?.sampleTask.presetResult;
+
+  if (firstTask?.title && firstTaskResult) {
+    await db().insert(tasks).values({
+      companyId: company.id,
+      userId: user.id,
+      title: firstTask.title,
+      inputPrompt: firstTask.description ?? firstTask.title,
+      status: "done",
+      resultMarkdown: firstTaskResult,
+      creditsUsed: 0,
+      isMock: true,
+      finishedAt: new Date(),
+    });
+  }
 
   if (mock) {
     await db()

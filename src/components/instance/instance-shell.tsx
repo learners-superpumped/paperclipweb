@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, Mail } from "lucide-react";
+import { Loader2, ArrowRight, Mail, Plus, Pencil } from "lucide-react";
 
 interface TaskRow {
   id: string;
@@ -36,6 +36,16 @@ export function InstanceShell({
   justPaid: boolean;
 }) {
   const router = useRouter();
+  const [visibleCompanyName, setVisibleCompanyName] = useState(company.name);
+  const [companyDraft, setCompanyDraft] = useState(company.name);
+  const [employees, setEmployees] = useState(company.employees);
+  const [employeeName, setEmployeeName] = useState("");
+  const [employeeRole, setEmployeeRole] = useState("");
+  const [taskRows, setTaskRows] = useState(tasks);
+  const [credits, setCredits] = useState({
+    balance: user.creditsBalance,
+    limit: user.creditsLimit,
+  });
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPrompt, setTaskPrompt] = useState("");
   const [running, setRunning] = useState(false);
@@ -57,11 +67,26 @@ export function InstanceShell({
           prompt: taskPrompt.trim(),
         }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        task?: TaskRow;
+        creditsBalance?: number;
+        creditsLimit?: number;
+      };
       if (!res.ok || !data.ok) {
         setError(data.error ?? "task 실행에 실패했어요.");
         setRunning(false);
         return;
+      }
+      if (data.task) {
+        setTaskRows((current) => [data.task as TaskRow, ...current]);
+      }
+      if (typeof data.creditsBalance === "number") {
+        setCredits({
+          balance: data.creditsBalance,
+          limit: data.creditsLimit ?? credits.limit,
+        });
       }
       setTaskTitle("");
       setTaskPrompt("");
@@ -73,8 +98,29 @@ export function InstanceShell({
     }
   };
 
-  const lowBalance = user.creditsBalance <= 10;
-  const zeroBalance = user.creditsBalance <= 0;
+  const handleCompanyRename = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyDraft.trim()) return;
+    setVisibleCompanyName(companyDraft.trim());
+  };
+
+  const handleEmployeeAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employeeName.trim() || !employeeRole.trim()) return;
+    setEmployees((current) => [
+      ...current,
+      {
+        name: employeeName.trim(),
+        role: employeeRole.trim(),
+        bio: `${employeeRole.trim()} 역할로 새로 합류했습니다.`,
+      },
+    ]);
+    setEmployeeName("");
+    setEmployeeRole("");
+  };
+
+  const lowBalance = credits.balance <= 10;
+  const zeroBalance = credits.balance <= 0;
 
   return (
     <div className="min-h-screen bg-secondary-50/40">
@@ -84,14 +130,14 @@ export function InstanceShell({
             href="/dashboard"
             className="text-sm font-semibold text-secondary-800"
           >
-            paperclip · {company.name}
+            paperclip · {visibleCompanyName}
           </Link>
           <div className="flex items-center gap-4 text-xs">
             <div
               className="text-secondary-800 font-medium"
               data-testid="credits-balance"
             >
-              크레딧 {user.creditsBalance} / {user.creditsLimit}
+              크레딧 {credits.balance} / {credits.limit}
             </div>
             <Link
               href="/dashboard/billing"
@@ -108,7 +154,7 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-6 rounded-xl border border-accent/30 bg-accent-50 text-secondary-800 p-4 text-sm"
           data-testid="just-paid-banner"
         >
-          🎉 결제 완료 — {company.name} 인스턴스가 준비됐어요. mock 에서 만드신
+          🎉 결제 완료 — {visibleCompanyName} 인스턴스가 준비됐어요. mock 에서 만드신
           회사·직원·첫 task 가 이 화면에 그대로 옮겨갔습니다.
         </div>
       )}
@@ -118,7 +164,7 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm"
           data-testid="low-balance-banner"
         >
-          잔액이 {user.creditsBalance} 액션 남았어요. 부족해지기 전에{" "}
+          잔액이 {credits.balance} 액션 남았어요. 부족해지기 전에{" "}
           <Link href="/dashboard/billing" className="underline">
             $10 충전
           </Link>{" "}
@@ -142,12 +188,12 @@ export function InstanceShell({
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
         <section className="rounded-2xl border border-secondary-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            {firstName}님의 {company.name} — 직원 명단
+            {firstName}님의 {visibleCompanyName} — 직원 명단
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {company.employees.map((emp) => (
+            {employees.map((emp) => (
               <div
-                key={emp.role}
+                key={`${emp.role}-${emp.name}`}
                 className="rounded-lg border border-secondary-100 p-3 text-sm"
               >
                 <div className="font-medium text-secondary-800">
@@ -161,6 +207,45 @@ export function InstanceShell({
             인스턴스 path: <code>/i/{company.slug}</code>{" "}
             {company.mockMode ? "(mock 모드 — 출시 후 진짜 sub-domain 으로 전환)" : ""}
           </p>
+        </section>
+
+        <section
+          className="rounded-2xl border border-secondary-200 bg-white p-6"
+          data-testid="free-add-controls"
+        >
+          <h2 className="text-lg font-semibold text-secondary-800 mb-3">
+            회사·직원 자유 추가
+          </h2>
+          <form onSubmit={handleCompanyRename} className="flex flex-col sm:flex-row gap-2 mb-4">
+            <Input
+              value={companyDraft}
+              onChange={(e) => setCompanyDraft(e.target.value)}
+              aria-label="회사 이름"
+              data-testid="company-name-input"
+            />
+            <Button type="submit" variant="outline" className="gap-2">
+              <Pencil className="h-4 w-4" />
+              회사 이름 적용
+            </Button>
+          </form>
+          <form onSubmit={handleEmployeeAdd} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+            <Input
+              placeholder="직원 이름"
+              value={employeeName}
+              onChange={(e) => setEmployeeName(e.target.value)}
+              data-testid="employee-name-input"
+            />
+            <Input
+              placeholder="역할 예: Growth Manager"
+              value={employeeRole}
+              onChange={(e) => setEmployeeRole(e.target.value)}
+              data-testid="employee-role-input"
+            />
+            <Button type="submit" className="gap-2" data-testid="add-employee-btn">
+              <Plus className="h-4 w-4" />
+              직원 추가
+            </Button>
+          </form>
         </section>
 
         <section
@@ -216,13 +301,13 @@ export function InstanceShell({
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
             지난 task
           </h2>
-          {tasks.length === 0 ? (
+          {taskRows.length === 0 ? (
             <p className="text-sm text-secondary-700">
               아직 task 가 없어요. 위에서 첫 task 를 시켜보세요.
             </p>
           ) : (
             <ul className="space-y-3">
-              {tasks.map((t) => (
+              {taskRows.map((t) => (
                 <li
                   key={t.id}
                   className="rounded-lg border border-secondary-100 p-3"
@@ -231,6 +316,11 @@ export function InstanceShell({
                   <div className="flex items-center justify-between gap-3 mb-1">
                     <div className="text-sm font-medium text-secondary-800">
                       {t.title}
+                      {t.isMock && (
+                        <span className="ml-2 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary">
+                          mock 에서 이관됨
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-secondary-700">
                       {t.status === "done" ? "✅" : t.status === "running" ? "⏳" : "❌"}{" "}

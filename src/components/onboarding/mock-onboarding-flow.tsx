@@ -29,7 +29,7 @@ export function MockOnboardingFlow({
 
   useEffect(() => {
     if (stage === "creating_company") {
-      const t = setTimeout(() => setStage("company_ready"), 4000);
+      const t = setTimeout(() => setStage("company_ready"), 1200);
       return () => clearTimeout(t);
     }
     if (stage === "company_ready") {
@@ -70,7 +70,7 @@ export function MockOnboardingFlow({
               직원·조직도·도구 세팅 중…
             </div>
           ) : (
-            <div data-testid="company-ready">
+            <div data-testid="company-ready" data-company-created="true">
               <h2
                 className="text-xl font-semibold text-secondary-800 mb-2"
                 data-testid="welcome-headline"

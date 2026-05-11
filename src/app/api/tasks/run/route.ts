@@ -69,10 +69,25 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  await db()
+  const [updatedUser] = await db()
     .update(users)
-    .set({ creditsBalance: sql`${users.creditsBalance} - 1` })
-    .where(eq(users.id, user.id));
+    .set({
+      creditsBalance: sql`${users.creditsBalance} - 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, user.id))
+    .returning({
+      creditsBalance: users.creditsBalance,
+      creditsLimit: users.creditsLimit,
+    });
+
+  await db()
+    .update(companies)
+    .set({
+      creditsUsed: sql`${companies.creditsUsed} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(companies.id, company.id));
 
   await db().insert(creditTransactions).values({
     userId: user.id,
@@ -99,5 +114,18 @@ export async function POST(req: Request) {
     console.error("[tasks] result mail failed", err);
   }
 
-  return NextResponse.json({ ok: true, taskId: task.id });
+  return NextResponse.json({
+    ok: true,
+    task: {
+      id: task.id,
+      title: task.title,
+      inputPrompt: task.inputPrompt,
+      status: task.status,
+      resultMarkdown: task.resultMarkdown,
+      createdAt: task.createdAt.toISOString(),
+      isMock: task.isMock,
+    },
+    creditsBalance: updatedUser?.creditsBalance ?? user.creditsBalance - 1,
+    creditsLimit: updatedUser?.creditsLimit ?? user.creditsLimit,
+  });
 }
