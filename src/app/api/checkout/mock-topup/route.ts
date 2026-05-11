@@ -30,7 +30,7 @@ export async function POST() {
     userId: user.id,
     amount: TOPUP.credits,
     type: "topup",
-    description: `$${TOPUP.price} 충전 = ${TOPUP.credits} 액션 (mock)`,
+    description: `$${TOPUP.price} top up = ${TOPUP.credits} actions (mock)`,
   });
 
   return NextResponse.json({ ok: true });

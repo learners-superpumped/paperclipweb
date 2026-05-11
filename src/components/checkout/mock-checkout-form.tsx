@@ -28,22 +28,22 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
 
     if (normalized === DECLINED_CARD) {
       setError(
-        "카드가 거절됐습니다. 다른 카드로 시도하시거나 카드사에 문의해주세요.",
+        "Your card was declined. Try another card or contact your bank.",
       );
       return;
     }
     if (normalized !== SUCCESS_CARD) {
       setError(
-        "카드 정보를 확인해주세요. (mock 결제 모드에서는 4242 4242 4242 4242 만 결제가 진행됩니다)",
+        "Please check your card details. (Mock mode accepts 4242 4242 4242 4242 for success.)",
       );
       return;
     }
     if (!/^\d{2}\s?\/\s?\d{2}$/.test(expiry)) {
-      setError("만료일을 MM/YY 형식으로 입력해주세요.");
+      setError("Enter expiry as MM/YY.");
       return;
     }
     if (!/^\d{3,4}$/.test(cvc)) {
-      setError("CVC 를 3~4자리 숫자로 입력해주세요.");
+      setError("CVC must be 3–4 digits.");
       return;
     }
 
@@ -60,13 +60,13 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
         error?: string;
       };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "결제 처리에 실패했어요. 잠시 후 다시 시도해주세요.");
+        setError(data.error ?? "Payment failed. Please try again.");
         setLoading(false);
         return;
       }
       router.push(`/i/${data.slug}?just_paid=1`);
     } catch {
-      setError("결제 처리에 실패했어요. 잠시 후 다시 시도해주세요.");
+      setError("Payment failed. Please try again.");
       setLoading(false);
     }
   };
@@ -78,14 +78,14 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
       data-testid="mock-checkout-form"
     >
       <div className="flex items-center gap-2 text-xs text-secondary-700 mb-1">
-        <Lock className="h-3 w-3" /> 안전한 결제 — mock 모드 (실제 결제 X)
+        <Lock className="h-3 w-3" /> Secure checkout — mock mode (no real charge)
       </div>
       <div>
         <label
           htmlFor="card"
           className="block text-sm font-medium text-secondary-800 mb-1.5"
         >
-          카드 번호
+          Card number
         </label>
         <Input
           id="card"
@@ -97,8 +97,8 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
           data-testid="card-number"
           required
         />
-        <p className="mt-1 text-[11px] text-secondary-600">
-          테스트 카드: 4242 4242 4242 4242 (성공) · 4000 0000 0000 0002 (실패)
+        <p className="mt-1 text-[11px] text-secondary-700">
+          Test cards: 4242 4242 4242 4242 (success) · 4000 0000 0000 0002 (declined)
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -107,7 +107,7 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
             htmlFor="expiry"
             className="block text-sm font-medium text-secondary-800 mb-1.5"
           >
-            만료일 (MM/YY)
+            Expiry (MM/YY)
           </label>
           <Input
             id="expiry"
@@ -155,13 +155,12 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          "$29 결제하기"
+          "Pay $29"
         )}
       </Button>
 
-      <p className="text-[11px] text-secondary-600 text-center">
-        결제 후 자동으로 진짜 인스턴스가 활성됩니다. mock 에서 만드신 게 그대로
-        옮겨갑니다.
+      <p className="text-[11px] text-secondary-700 text-center">
+        After payment, the real instance spins up automatically and everything you built in the mock carries over.
       </p>
     </form>
   );

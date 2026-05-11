@@ -16,8 +16,8 @@ const SITE_NAME = "paperclipweb";
 const SITE_TAGLINE = "Run your AI company with one bill";
 const SITE_DESCRIPTION =
   "paperclipweb is managed Paperclip hosting with bundled AI credits. One bill, one click, your AI company — deploy autonomous AI agents in 60 seconds without juggling Anthropic, OpenAI, or Railway bills.";
-const SITE_DESCRIPTION_KO =
-  "paperclipweb는 번들 AI 크레딧이 포함된 매니지드 Paperclip 호스팅입니다. 하나의 청구서, 한 번의 클릭으로 AI 회사를 60초 만에 배포하세요. Anthropic, OpenAI, Railway 요금을 따로 관리할 필요가 없습니다.";
+const SITE_DESCRIPTION_LONG =
+  "Hire an AI team and run a business on its own. Clone a YouTube-validated AI company in 5 minutes, then spin up the real instance with one click — bundled actions, real-time balance, top up anytime.";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     default: `${SITE_NAME} — ${SITE_TAGLINE}`,
     template: `%s | ${SITE_NAME}`,
   },
-  description: `${SITE_DESCRIPTION} ${SITE_DESCRIPTION_KO}`,
+  description: `${SITE_DESCRIPTION} ${SITE_DESCRIPTION_LONG}`,
   applicationName: SITE_NAME,
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
@@ -73,43 +73,23 @@ export const metadata: Metadata = {
     "AI agent dashboard",
     "AI ops",
     "AI billing",
-    // Korean — product
-    "페이퍼클립",
-    "페이퍼클립웹",
-    "AI 회사",
-    "AI 에이전트",
-    "AI 에이전트 호스팅",
-    "AI 에이전트 플랫폼",
-    "자율 AI 에이전트",
-    "AI 크레딧",
-    "AI 크레딧 번들",
-    "Anthropic 크레딧",
-    "OpenAI 크레딧",
-    "Claude 크레딧",
-    "AI 인프라",
-    "AI 매니지드 호스팅",
-    "AI 청구서",
-    "AI 통합 결제",
-    "AI 스타트업",
-    "AI 에이전트 배포",
-    "API 키 없이",
-    "AI 대시보드",
-    "AI 운영",
-    "AI SaaS",
-    "Railway 대안",
+    // Long-tail
+    "hire AI employees",
+    "AI business cloning",
+    "YouTube AI case clone",
+    "AI workflow company",
+    "AI sole proprietor toolkit",
   ],
   alternates: {
     canonical: SITE_URL,
     languages: {
       en: SITE_URL,
-      ko: SITE_URL,
       "x-default": SITE_URL,
     },
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    alternateLocale: ["ko_KR"],
     url: SITE_URL,
     siteName: SITE_NAME,
     title: `${SITE_NAME} — One bill. One click. Your AI company.`,

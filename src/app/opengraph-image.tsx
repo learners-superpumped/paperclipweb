@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "paperclip — AI 직원 채용해서 자동으로 돈 버는 회사";
+export const alt = "paperclip — Hire an AI team, run a business on its own";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -33,12 +33,12 @@ export default function OG() {
             letterSpacing: "-0.02em",
           }}
         >
-          AI 직원 채용해서
+          Hire an AI team,
           <br />
-          자동으로 돈 버는 회사
+          run a business on its own
         </div>
         <div style={{ fontSize: 28, marginTop: 32, opacity: 0.9 }}>
-          유튜브 케이스 5분 만에 따라 만들기 → $29 로 진짜 회사
+          Clone a YouTube case in 5 min → $29 for the real instance
         </div>
       </div>
     ),

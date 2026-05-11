@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     .where(eq(companies.userId, user.id))
     .orderBy(desc(companies.createdAt));
 
-  const firstName = (user.name ?? "친구").split(" ")[0];
+  const firstName = (user.name ?? "friend").split(" ")[0];
   const isPaid = user.plan === "pro";
 
   return (
@@ -38,10 +38,10 @@ export default async function DashboardPage() {
           </Link>
           <div className="flex items-center gap-4 text-xs">
             <div className="text-secondary-800 font-medium" data-testid="credits-balance">
-              크레딧 {user.creditsBalance} / {user.creditsLimit}
+              Credits {user.creditsBalance} / {user.creditsLimit}
             </div>
             <Link href="/dashboard/billing" className="text-primary hover:underline">
-              결제·충전
+              Billing
             </Link>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
         <h1 className="text-2xl font-bold text-secondary-800">
-          {firstName}님, 내 회사
+          {firstName}'s companies
         </h1>
 
         {!isPaid && (
@@ -57,10 +57,9 @@ export default async function DashboardPage() {
             className="rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm text-secondary-800"
             data-testid="upgrade-banner"
           >
-            아직 mock 단계예요. ${PLANS.pro.price} 결제하면 진짜 인스턴스가
-            활성됩니다.{" "}
+            You're still on mock. Pay ${PLANS.pro.price}/mo to spin up the real instance.{" "}
             <Link href="/cases" className="text-primary underline">
-              케이스 다시 보기
+              Browse cases again
             </Link>
           </div>
         )}
@@ -68,10 +67,10 @@ export default async function DashboardPage() {
         {userCompanies.length === 0 ? (
           <div className="rounded-2xl border border-secondary-200 bg-white p-8 text-center">
             <p className="text-secondary-700 mb-4">
-              아직 인스턴스가 없어요. 케이스 1개 골라 시작해보세요.
+              No instances yet. Pick a case to start.
             </p>
             <Link href="/cases">
-              <Button size="lg">케이스 보기</Button>
+              <Button size="lg">Browse cases</Button>
             </Link>
           </div>
         ) : (
@@ -89,11 +88,11 @@ export default async function DashboardPage() {
                       {c.name}
                     </div>
                     <div className="text-xs text-secondary-700 mt-0.5">
-                      <code>/i/{c.slug}</code> · 상태 {c.status}{" "}
+                      <code>/i/{c.slug}</code> · status {c.status}{" "}
                       {c.mockMode ? "(mock)" : ""}
                     </div>
                   </div>
-                  <div className="text-xs text-primary">들어가기 →</div>
+                  <div className="text-xs text-primary">Open →</div>
                 </div>
               </Link>
             ))}

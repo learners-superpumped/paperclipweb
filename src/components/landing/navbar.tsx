@@ -22,18 +22,18 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                로그인
+                Log in
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="sm">지금 시작</Button>
+              <Button size="sm">Start now</Button>
             </Link>
           </div>
 
           <button
             className="md:hidden p-2 cursor-pointer"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? "메뉴 닫기" : "메뉴 열기"}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
           >
             {mobileOpen ? (
               <X className="h-5 w-5 text-secondary-700" />
@@ -49,12 +49,12 @@ export function Navbar() {
               <div className="flex gap-2 px-3 pt-2">
                 <Link href="/login" className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">
-                    로그인
+                    Log in
                   </Button>
                 </Link>
                 <Link href="/signup" className="flex-1">
                   <Button size="sm" className="w-full">
-                    지금 시작
+                    Start now
                   </Button>
                 </Link>
               </div>

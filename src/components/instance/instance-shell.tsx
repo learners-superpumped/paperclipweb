@@ -137,13 +137,13 @@ export function InstanceShell({
               className="text-secondary-800 font-medium"
               data-testid="credits-balance"
             >
-              크레딧 {credits.balance} / {credits.limit}
+              Credits {credits.balance} / {credits.limit}
             </div>
             <Link
               href="/dashboard/billing"
               className="text-primary hover:underline"
             >
-              충전
+              Top up
             </Link>
           </div>
         </div>
@@ -154,8 +154,7 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-6 rounded-xl border border-accent/30 bg-accent-50 text-secondary-800 p-4 text-sm"
           data-testid="just-paid-banner"
         >
-          🎉 결제 완료 — {visibleCompanyName} 인스턴스가 준비됐어요. mock 에서 만드신
-          회사·직원·첫 task 가 이 화면에 그대로 옮겨갔습니다.
+          🎉 Payment complete — {visibleCompanyName} is live. Everything you built in the mock (company, team, first task) is right here.
         </div>
       )}
 
@@ -164,11 +163,11 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm"
           data-testid="low-balance-banner"
         >
-          잔액이 {credits.balance} 액션 남았어요. 부족해지기 전에{" "}
+          {credits.balance} actions left. Top up before you run out —{" "}
           <Link href="/dashboard/billing" className="underline">
-            $10 충전
-          </Link>{" "}
-          해두세요.
+            $10 buys 50 actions
+          </Link>
+          .
         </div>
       )}
 
@@ -177,18 +176,18 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-destructive/40 bg-destructive-50 text-destructive p-3 text-sm"
           data-testid="zero-balance-banner"
         >
-          잔액이 0 입니다. 새 task 를 시키려면{" "}
+          Balance is 0. To run a new task, you'll need to{" "}
           <Link href="/dashboard/billing" className="underline">
-            $10 으로 50 액션 충전
-          </Link>{" "}
-          이 필요해요.
+            top up $10 for 50 actions
+          </Link>
+          .
         </div>
       )}
 
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
         <section className="rounded-2xl border border-secondary-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            {firstName}님의 {visibleCompanyName} — 직원 명단
+            {firstName}'s {visibleCompanyName} — team roster
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {employees.map((emp) => (
@@ -204,8 +203,8 @@ export function InstanceShell({
             ))}
           </div>
           <p className="mt-3 text-xs text-secondary-700">
-            인스턴스 path: <code>/i/{company.slug}</code>{" "}
-            {company.mockMode ? "(mock 모드 — 출시 후 진짜 sub-domain 으로 전환)" : ""}
+            Instance path: <code>/i/{company.slug}</code>{" "}
+            {company.mockMode ? "(mock mode — will switch to a real sub-domain at launch)" : ""}
           </p>
         </section>
 
@@ -214,36 +213,36 @@ export function InstanceShell({
           data-testid="free-add-controls"
         >
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            회사·직원 자유 추가
+            Customize company & team
           </h2>
           <form onSubmit={handleCompanyRename} className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input
               value={companyDraft}
               onChange={(e) => setCompanyDraft(e.target.value)}
-              aria-label="회사 이름"
+              aria-label="Company name"
               data-testid="company-name-input"
             />
             <Button type="submit" variant="outline" className="gap-2">
               <Pencil className="h-4 w-4" />
-              회사 이름 적용
+              Rename company
             </Button>
           </form>
           <form onSubmit={handleEmployeeAdd} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
             <Input
-              placeholder="직원 이름"
+              placeholder="Employee name"
               value={employeeName}
               onChange={(e) => setEmployeeName(e.target.value)}
               data-testid="employee-name-input"
             />
             <Input
-              placeholder="역할 예: Growth Manager"
+              placeholder="Role e.g. Growth Manager"
               value={employeeRole}
               onChange={(e) => setEmployeeRole(e.target.value)}
               data-testid="employee-role-input"
             />
             <Button type="submit" className="gap-2" data-testid="add-employee-btn">
               <Plus className="h-4 w-4" />
-              직원 추가
+              Add employee
             </Button>
           </form>
         </section>
@@ -253,18 +252,18 @@ export function InstanceShell({
           data-testid="task-runner"
         >
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            새 task 시키기
+            Run a new task
           </h2>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
-              placeholder="예: 이번 주 카페 인스타 포스트 3개"
+              placeholder="e.g. 3 Instagram posts for our café this week"
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
               data-testid="task-title"
               required
             />
             <textarea
-              placeholder="구체적으로 어떤 결과를 원하시는지 설명해주세요 (어조, 키워드, 분량 등)"
+              placeholder="Describe the outcome you want (tone, keywords, length, audience…)"
               value={taskPrompt}
               onChange={(e) => setTaskPrompt(e.target.value)}
               data-testid="task-prompt"
@@ -286,7 +285,7 @@ export function InstanceShell({
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  시키기 (1 액션)
+                  Run task (1 action)
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -299,11 +298,11 @@ export function InstanceShell({
           data-testid="task-history"
         >
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            지난 task
+            Recent tasks
           </h2>
           {taskRows.length === 0 ? (
             <p className="text-sm text-secondary-700">
-              아직 task 가 없어요. 위에서 첫 task 를 시켜보세요.
+              No tasks yet. Run your first one above.
             </p>
           ) : (
             <ul className="space-y-3">
@@ -318,13 +317,13 @@ export function InstanceShell({
                       {t.title}
                       {t.isMock && (
                         <span className="ml-2 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary">
-                          mock 에서 이관됨
+                          carried from mock
                         </span>
                       )}
                     </div>
                     <div className="text-xs text-secondary-700">
                       {t.status === "done" ? "✅" : t.status === "running" ? "⏳" : "❌"}{" "}
-                      {new Date(t.createdAt).toLocaleString("ko-KR")}
+                      {new Date(t.createdAt).toLocaleString("en-US")}
                     </div>
                   </div>
                   {t.resultMarkdown && (
@@ -333,8 +332,8 @@ export function InstanceShell({
                     </pre>
                   )}
                   {t.resultMarkdown && (
-                    <div className="mt-2 text-[11px] text-secondary-600 flex items-center gap-1">
-                      <Mail className="h-3 w-3" /> 결과 메일 발송됨
+                    <div className="mt-2 text-[11px] text-secondary-700 flex items-center gap-1">
+                      <Mail className="h-3 w-3" /> Result emailed
                     </div>
                   )}
                 </li>

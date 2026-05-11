@@ -20,14 +20,14 @@ export function TopUpButton() {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        setError(data.error ?? "충전에 실패했어요.");
+        setError(data.error ?? "Top up failed.");
         setLoading(false);
         return;
       }
       router.refresh();
       setLoading(false);
     } catch {
-      setError("충전에 실패했어요.");
+      setError("Top up failed.");
       setLoading(false);
     }
   };
@@ -44,7 +44,7 @@ export function TopUpButton() {
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          `${TOPUP.credits} 액션 충전하기 ($${TOPUP.price})`
+          `Top up ${TOPUP.credits} actions ($${TOPUP.price})`
         )}
       </Button>
       {error && (

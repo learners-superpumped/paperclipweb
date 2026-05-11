@@ -58,10 +58,10 @@ export default function PricingPage() {
             </span>
           </Link>
           <h1 className="text-3xl font-bold text-secondary-800 sm:text-4xl">
-            한 가지 가격, 한 가지 탑업
+            One price, one top-up
           </h1>
-          <p className="mt-3 text-base text-secondary-600">
-            tier 비교 없이 단순하게. 부족하면 $10 로 충전.
+          <p className="mt-3 text-base text-secondary-700">
+            No tier comparison. When you need more, top up for $10.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export default function PricingPage() {
             data-testid="plan-pro"
           >
             <div className="text-xs font-medium text-primary uppercase tracking-wide mb-1">
-              월 구독
+              Monthly subscription
             </div>
             <div className="text-2xl font-semibold text-secondary-800">
               Pro
@@ -83,10 +83,10 @@ export default function PricingPage() {
               <span className="text-5xl font-bold text-secondary-800">
                 ${PLANS.pro.price}
               </span>
-              <span className="text-base text-secondary-600">/월</span>
+              <span className="text-base text-secondary-700">/mo</span>
             </div>
-            <p className="mt-2 text-sm text-secondary-600">
-              {PLANS.pro.credits} 액션 + 인스턴스 1개 + 이메일 알림
+            <p className="mt-2 text-sm text-secondary-700">
+              {PLANS.pro.credits} actions + 1 instance + email alerts
             </p>
             <ul className="mt-6 mb-8 space-y-3 flex-1">
               {PLANS.pro.features.map((feature) => (
@@ -118,8 +118,8 @@ export default function PricingPage() {
             className="rounded-2xl border border-secondary-200 bg-secondary-50/40 p-8 flex flex-col"
             data-testid="plan-topup"
           >
-            <div className="text-xs font-medium text-secondary-600 uppercase tracking-wide mb-1">
-              탑업 (한 번 결제)
+            <div className="text-xs font-medium text-secondary-700 uppercase tracking-wide mb-1">
+              Top up (one-time)
             </div>
             <div className="text-2xl font-semibold text-secondary-800">
               {TOPUP.name}
@@ -128,21 +128,21 @@ export default function PricingPage() {
               <span className="text-5xl font-bold text-secondary-800">
                 ${TOPUP.price}
               </span>
-              <span className="text-base text-secondary-600">
-                / {TOPUP.credits} 액션
+              <span className="text-base text-secondary-700">
+                / {TOPUP.credits} actions
               </span>
             </div>
             <p className="mt-2 text-sm text-secondary-700">
               {TOPUP.description}
             </p>
-            <p className="mt-auto pt-6 text-xs text-secondary-600">
-              잔액 부족하면 한 화면 안에서 충전 — 즉시 반영.
+            <p className="mt-auto pt-6 text-xs text-secondary-700">
+              Top up from inside the dashboard — applied instantly.
             </p>
           </div>
         </div>
 
         <p className="mt-10 text-center text-sm text-secondary-700">
-          Free plan 없음. mock 온보딩 1회 무료 → 마음에 들면 $29 결제.
+          No free plan. One free mock onboarding → if it clicks, pay $29.
         </p>
       </div>
     </div>

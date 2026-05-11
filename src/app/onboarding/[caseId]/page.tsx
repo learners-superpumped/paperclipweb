@@ -22,7 +22,7 @@ export default async function CaseOnboardingPage({
   return (
     <MockOnboardingFlow
       template={template}
-      userName={session.user.name ?? "친구"}
+      userName={session.user.name ?? "friend"}
       userEmail={session.user.email}
     />
   );

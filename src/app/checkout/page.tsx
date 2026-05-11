@@ -22,10 +22,10 @@ export default async function CheckoutPage({
       <div className="mx-auto max-w-xl">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-secondary-800">
-            결제하고 진짜 회사 시작
+            Pay and spin up the real company
           </h1>
           <p className="mt-2 text-sm text-secondary-700">
-            mock 에서 만드신 게 결제 직후 진짜 인스턴스로 그대로 옮겨갑니다.
+            Everything you built in the mock — company, team, first task — moves into the real instance.
           </p>
         </div>
 
@@ -34,34 +34,32 @@ export default async function CheckoutPage({
           data-testid="order-summary"
         >
           <h2 className="text-sm font-semibold text-secondary-800 mb-3">
-            주문 요약
+            Order summary
           </h2>
           <div className="flex items-baseline justify-between">
             <div>
               <div className="text-secondary-800 font-medium">
-                Pro 구독 (월 결제)
+                Pro subscription (billed monthly)
               </div>
               <div className="text-xs text-secondary-700">
-                {PLANS.pro.credits} 액션 + 인스턴스 1개 + 이메일 알림
+                {PLANS.pro.credits} actions + 1 instance + email alerts
               </div>
             </div>
             <div className="text-2xl font-bold text-secondary-800">
               ${PLANS.pro.price}
-              <span className="text-sm text-secondary-700 font-normal">/월</span>
+              <span className="text-sm text-secondary-700 font-normal">/mo</span>
             </div>
           </div>
           {template && (
             <div className="mt-4 rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm text-secondary-700">
-              <span className="text-xs text-primary/80 font-medium mr-2">
-                이관 대상
+              <span className="text-xs text-primary font-medium mr-2">
+                Carrying over
               </span>
-              {template.emoji} {template.company} (mock 에서 만든 회사 그대로
-              진짜 인스턴스로)
+              {template.emoji} {template.company} — everything you built in the mock moves into the real instance
             </div>
           )}
-          <div className="mt-3 text-xs text-secondary-600">
-            잔액 부족 시 ${TOPUP.price} 로 {TOPUP.credits} 액션 충전 가능 (가입
-            후 dashboard 에서).
+          <div className="mt-3 text-xs text-secondary-700">
+            Need more actions? Top up later from the dashboard — ${TOPUP.price} for {TOPUP.credits} actions.
           </div>
         </div>
 

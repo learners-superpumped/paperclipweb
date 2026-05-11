@@ -62,12 +62,12 @@ export function MockOnboardingFlow({
         <StepCard
           active={stage === "creating_company"}
           done={stage !== "creating_company"}
-          title={`${firstName}님의 회사를 만들고 있어요`}
+          title={`Spinning up ${firstName}'s company`}
         >
           {stage === "creating_company" ? (
-            <div className="flex items-center gap-3 text-secondary-600 text-sm">
+            <div className="flex items-center gap-3 text-secondary-700 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
-              직원·조직도·도구 세팅 중…
+              Setting up team, org chart, tools…
             </div>
           ) : (
             <div data-testid="company-ready" data-company-created="true">
@@ -75,10 +75,10 @@ export function MockOnboardingFlow({
                 className="text-xl font-semibold text-secondary-800 mb-2"
                 data-testid="welcome-headline"
               >
-                안녕하세요 {firstName}님, &lsquo;{template.company}&rsquo; 가
-                준비됐어요 {template.emoji}
+                Hi {firstName} — &lsquo;{template.company}&rsquo; is ready{" "}
+                {template.emoji}
               </h2>
-              <p className="text-sm text-secondary-600 mb-4">
+              <p className="text-sm text-secondary-700 mb-4">
                 {template.mission}
               </p>
               <div data-testid="org-chart" className="space-y-2">
@@ -113,7 +113,7 @@ export function MockOnboardingFlow({
               stage === "running_task" ||
               stage === "task_done"
             }
-            title="핵심 직원 자기소개가 도착했어요"
+            title="An employee just introduced themselves"
           >
             <CtoIntro template={template} userName={firstName} />
           </StepCard>
@@ -125,7 +125,7 @@ export function MockOnboardingFlow({
           <StepCard
             active={stage === "sample_task_ready" || stage === "running_task"}
             done={stage === "task_done"}
-            title="첫 task — 시작 준비 완료"
+            title="First task — ready to run"
           >
             <SampleTask
               template={template}
@@ -145,9 +145,9 @@ export function MockOnboardingFlow({
 
 function ProgressTrail({ stage }: { stage: Stage }) {
   const steps = [
-    { key: "company", label: "회사 생성" },
-    { key: "cto", label: "직원 인사" },
-    { key: "task", label: "첫 결과" },
+    { key: "company", label: "Company" },
+    { key: "cto", label: "Team intro" },
+    { key: "task", label: "First result" },
   ];
   const idx =
     stage === "creating_company" || stage === "company_ready"
@@ -232,7 +232,7 @@ function CtoIntro({
         </div>
       </div>
       <div className="rounded-lg bg-secondary-50 p-4 text-sm text-secondary-700 leading-relaxed">
-        {userName}님 안녕하세요. {cto.bio} {template.company} 에서 {template.mission} 를 함께 도와드릴 거예요.
+        Hi {userName}. {cto.bio} I'll help you run {template.company} — {template.mission}.
       </div>
     </div>
   );
@@ -266,17 +266,17 @@ function SampleTask({
           data-testid="run-task-btn"
           onClick={onRun}
         >
-          시키기
+          Run it
           <ArrowRight className="h-4 w-4" />
         </Button>
       )}
       {stage === "running_task" && (
         <div
-          className="flex items-center gap-3 text-secondary-600 text-sm"
+          className="flex items-center gap-3 text-secondary-700 text-sm"
           data-testid="task-running"
         >
           <Loader2 className="h-4 w-4 animate-spin" />
-          직원들이 작업 중… (보통 30~60초)
+          The team is on it… (usually 30–60s)
         </div>
       )}
       {stage === "task_done" && (
@@ -284,14 +284,14 @@ function SampleTask({
           <div className="rounded-lg bg-secondary-50 border border-secondary-100 p-4 text-sm text-secondary-700 whitespace-pre-wrap mb-3">
             {template.sampleTask.presetResult}
           </div>
-          <div className="flex items-center gap-2 text-xs text-secondary-500">
+          <div className="flex items-center gap-2 text-xs text-secondary-700">
             <Mail className="h-3.5 w-3.5" />
             {emailSent ? (
               <span data-testid="task-email-sent">
-                결과가 {userEmail} 로도 발송됐어요.
+                Result also sent to {userEmail}.
               </span>
             ) : (
-              <span>{userEmail} 로 결과 메일이 가는 중…</span>
+              <span>Sending result to {userEmail}…</span>
             )}
           </div>
         </div>
@@ -307,24 +307,24 @@ function UpgradeHook({ template }: { template: CaseTemplate }) {
       className="rounded-2xl border border-primary/30 bg-primary/5 p-6"
     >
       <h3 className="text-lg font-semibold text-secondary-800 mb-2">
-        여기까지 와우 받으셨다면 — 다음은 진짜 회사
+        Liked what you saw? Next: a real instance.
       </h3>
       <p className="text-sm text-secondary-700 leading-relaxed mb-4">
-        두 번째 task · 다음 직원 · 진짜 paperclip 인스턴스 활성 — 월 $29 로
-        시작합니다. 지금까지 만든 {template.company} 가 그대로 옮겨갑니다.
+        Second task · next employee · real paperclip instance — all for $29/month.
+        Your {template.company} carries over as-is.
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
         <Link href={`/checkout?case=${template.id}`} data-testid="checkout-cta">
           <Button size="lg" className="w-full sm:w-auto gap-2">
-            $29 로 시작하기
+            Start for $29
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
         <Link
           href="/cases"
-          className="text-sm text-secondary-500 hover:text-secondary-700 flex items-center"
+          className="text-sm text-secondary-700 hover:text-secondary-800 flex items-center"
         >
-          다른 케이스 보기
+          See other cases
         </Link>
       </div>
     </div>

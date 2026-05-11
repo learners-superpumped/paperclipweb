@@ -41,44 +41,44 @@ export default async function BillingPage() {
       <header className="border-b border-secondary-200 bg-white">
         <div className="mx-auto max-w-3xl px-4 h-14 flex items-center justify-between">
           <Link href="/dashboard" className="text-sm font-semibold text-secondary-800">
-            ← 대시보드
+            ← Dashboard
           </Link>
           <div className="text-xs text-secondary-800">
-            크레딧 {user.creditsBalance} / {user.creditsLimit}
+            Credits {user.creditsBalance} / {user.creditsLimit}
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
-        <h1 className="text-2xl font-bold text-secondary-800">결제·충전</h1>
+        <h1 className="text-2xl font-bold text-secondary-800">Billing & top up</h1>
 
         <section
           className="rounded-2xl border border-secondary-200 bg-white p-6"
           data-testid="subscription-card"
         >
           <h2 className="text-sm font-semibold text-secondary-800 mb-3">
-            현재 구독
+            Current subscription
           </h2>
           {activeSub?.status === "active" ? (
             <div>
               <div className="text-xl font-semibold text-secondary-800">
-                Pro · ${PLANS.pro.price}/월
+                Pro · ${PLANS.pro.price}/mo
               </div>
               <div className="text-sm text-secondary-700 mt-1">
-                {PLANS.pro.credits} 액션 + 인스턴스 1개 + 이메일 알림
+                {PLANS.pro.credits} actions + 1 instance + email alerts
               </div>
               {activeSub.currentPeriodEnd && (
                 <div className="text-xs text-secondary-700 mt-2">
-                  다음 결제일: {new Date(activeSub.currentPeriodEnd).toLocaleDateString("ko-KR")}
+                  Next charge: {new Date(activeSub.currentPeriodEnd).toLocaleDateString("en-US")}
                 </div>
               )}
             </div>
           ) : (
             <div>
               <div className="text-base text-secondary-800">
-                아직 구독하지 않았어요.
+                No active subscription yet.
               </div>
               <Link href="/cases" className="text-primary text-sm underline mt-2 inline-block">
-                케이스 골라 ${PLANS.pro.price} 결제로 시작 →
+                Pick a case and start for ${PLANS.pro.price} →
               </Link>
             </div>
           )}
@@ -89,14 +89,14 @@ export default async function BillingPage() {
           data-testid="topup-card"
         >
           <h2 className="text-sm font-semibold text-secondary-800 mb-2">
-            잔액 충전 — 한 번 결제
+            Top up — one-time charge
           </h2>
           <div className="flex items-baseline gap-1 mb-3">
             <span className="text-3xl font-bold text-secondary-800">
               ${TOPUP.price}
             </span>
             <span className="text-sm text-secondary-700">
-              / {TOPUP.credits} 액션
+              / {TOPUP.credits} actions
             </span>
           </div>
           <p className="text-xs text-secondary-700 mb-4">
@@ -110,10 +110,10 @@ export default async function BillingPage() {
           data-testid="transactions"
         >
           <h2 className="text-sm font-semibold text-secondary-800 mb-3">
-            최근 내역
+            Recent transactions
           </h2>
           {txns.length === 0 ? (
-            <p className="text-sm text-secondary-700">아직 거래 내역이 없어요.</p>
+            <p className="text-sm text-secondary-700">No transactions yet.</p>
           ) : (
             <ul className="space-y-2">
               {txns.map((t) => (
@@ -127,7 +127,7 @@ export default async function BillingPage() {
                     }
                   >
                     {t.amount >= 0 ? "+" : ""}
-                    {t.amount} 액션
+                    {t.amount} actions
                   </span>
                 </li>
               ))}

@@ -9,8 +9,8 @@ export function Footer() {
           <Paperclip className="h-5 w-5 text-primary" />
           <span className="font-bold text-secondary-800">paperclip</span>
         </Link>
-        <p className="text-sm text-secondary-600">
-          &copy; {new Date().getFullYear()} paperclip. AI 직원 채용해서 자동으로 돈 버는 회사.
+        <p className="text-sm text-secondary-700">
+          &copy; {new Date().getFullYear()} paperclip. Hire an AI team. Run a business on its own.
         </p>
       </div>
     </footer>

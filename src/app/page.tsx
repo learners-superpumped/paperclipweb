@@ -15,7 +15,7 @@ const softwareLd = {
   applicationSubCategory: "AI Agent Orchestration Hosting",
   operatingSystem: "Web",
   description:
-    "유튜브에서 본 AI 자동화 회사를 5분 만에 따라 만들고, 결제 한 번에 진짜 인스턴스를 띄우세요.",
+    "Clone a YouTube-validated AI business in 5 minutes, then spin up the real instance with one click.",
   url: SITE_URL,
   image: `${SITE_URL}/og.png`,
 };

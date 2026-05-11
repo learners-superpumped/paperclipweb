@@ -20,10 +20,10 @@ export default async function CasesPage() {
             className="text-3xl font-bold text-secondary-800"
             data-testid="cases-heading"
           >
-            {firstName ? `${firstName}님, ` : ""}어떤 회사 만들어볼까요?
+            {firstName ? `${firstName}, ` : ""}which company do you want to run?
           </h1>
           <p className="mt-3 text-secondary-700">
-            카드 하나 고르시면 60초 안에 회사가 준비됩니다.
+            Pick a card and your company is ready in under 60 seconds.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default async function CasesPage() {
               </div>
               <div className="text-xs text-secondary-700 space-y-1 mb-4">
                 <div>
-                  <span className="font-medium text-secondary-800">직원</span>:{" "}
+                  <span className="font-medium text-secondary-800">Team</span>:{" "}
                   {c.employees.map((e) => e.role).join(", ")}
                 </div>
                 <div>
@@ -64,12 +64,12 @@ export default async function CasesPage() {
               <div className="mt-auto space-y-2">
                 <Link href={`/onboarding/${c.id}`} className="block">
                   <Button size="sm" className="w-full">
-                    이 회사로 시작
+                    Start with this case
                   </Button>
                 </Link>
                 <div className="space-y-1 pt-2 border-t border-secondary-100">
-                  <div className="text-[11px] text-secondary-600 mb-1">
-                    유튜브 케이스 영상
+                  <div className="text-[11px] text-secondary-700 mb-1">
+                    YouTube cases
                   </div>
                   {c.youtube.map((y, i) => (
                     <a

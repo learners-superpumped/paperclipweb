@@ -147,7 +147,7 @@ export async function POST(req: Request) {
     companyId: company.id,
     amount: PLANS.pro.credits,
     type: "subscription",
-    description: "Pro 구독 결제 (mock) — 100 액션 충전",
+    description: "Pro subscription (mock) — 100 actions credited",
   });
 
   const firstTask = mockPayload?.sampleTask ?? template?.sampleTask;
@@ -175,18 +175,18 @@ export async function POST(req: Request) {
       .where(eq(mockCompanies.id, mock.id));
   }
 
-  // 발송 메일 (best-effort)
-  const firstName = (user.name ?? "친구").split(" ")[0];
+  // Welcome mail (best-effort)
+  const firstName = (user.name ?? "friend").split(" ")[0];
   try {
     await sendEmail({
       to: email,
-      subject: `[Paperclip] ${companyName} 인스턴스 준비 완료`,
+      subject: `[Paperclip] ${companyName} instance is ready`,
       body: `
         <div style="max-width:560px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:32px 24px;">
-          <h2 style="color:#0F172A;font-size:22px;">${firstName}님, ${companyName} 가 준비됐어요</h2>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">결제가 완료됐고 인스턴스가 활성됐어요. mock 에서 만드신 회사·직원·첫 task 가 그대로 옮겨갔습니다.</p>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">잔액 100 액션이 충전됐어요. 부족하면 dashboard 에서 $10 으로 50 액션 충전 가능.</p>
-          <a href="https://usepaperclip.app/i/${slug}" style="display:inline-block;background:#4F46E5;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">내 회사 들어가기</a>
+          <h2 style="color:#0F172A;font-size:22px;">Hi ${firstName} — ${companyName} is live</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">Payment went through and your instance is up. Everything you built in the mock (company, team, first task) carried over as-is.</p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">100 actions are credited. When you need more, top up $10 for 50 actions from the dashboard.</p>
+          <a href="https://usepaperclip.app/i/${slug}" style="display:inline-block;background:#4F46E5;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">Open my company</a>
         </div>
       `,
     });

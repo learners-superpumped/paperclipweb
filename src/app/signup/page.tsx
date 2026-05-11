@@ -55,9 +55,7 @@ function SignupInner() {
     void signIn("email", { email, redirect: false, callbackUrl }).then(
       (result) => {
         if (result?.error) {
-          setError(
-            "메일 발송이 실패한 것 같아요. 잠시 후 다시 시도해주세요.",
-          );
+          setError("Couldn't send the magic link. Please try again.");
           setSent(false);
         }
       },
@@ -78,20 +76,20 @@ function SignupInner() {
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-800">
-            가입하기
+            Create your account
           </h1>
-          <p className="mt-2 text-sm text-secondary-500">
-            이메일·이름만 — 비밀번호 없이 메일 한 번으로 끝.
+          <p className="mt-2 text-sm text-secondary-700">
+            Just email + name — no password, one magic link.
           </p>
         </div>
 
         {selectedCase && (
           <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-secondary-700">
-            <div className="text-xs text-primary/80 mb-1">선택한 케이스</div>
+            <div className="text-xs text-primary mb-1">Selected case</div>
             <div className="font-semibold text-secondary-800">
               {selectedCase.emoji} {selectedCase.company}
             </div>
-            <div className="mt-1 text-secondary-600">
+            <div className="mt-1 text-secondary-700">
               {selectedCase.oneLiner} · {selectedCase.mission}
             </div>
           </div>
@@ -112,12 +110,12 @@ function SignupInner() {
               <Mail className="h-6 w-6 text-accent" />
             </div>
             <h2 className="text-lg font-semibold text-secondary-800">
-              메일을 확인해주세요
+              Check your email
             </h2>
-            <p className="mt-2 text-sm text-secondary-500">
-              <span className="font-medium text-secondary-700">{email}</span>{" "}
-              로 로그인 링크를 보냈어요. 메일의 링크 한 번 클릭으로 바로
-              시작합니다.
+            <p className="mt-2 text-sm text-secondary-700">
+              We sent a sign-in link to{" "}
+              <span className="font-medium text-secondary-800">{email}</span>.
+              One click and you're in.
             </p>
             <Button
               variant="ghost"
@@ -125,7 +123,7 @@ function SignupInner() {
               onClick={() => setSent(false)}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              다른 이메일 쓰기
+              Use a different email
             </Button>
           </div>
         ) : (
@@ -138,14 +136,14 @@ function SignupInner() {
               <div>
                 <label
                   htmlFor="name"
-                  className="block text-sm font-medium text-secondary-700 mb-1.5"
+                  className="block text-sm font-medium text-secondary-800 mb-1.5"
                 >
-                  이름
+                  Name
                 </label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="홍길동"
+                  placeholder="Jane Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -154,9 +152,9 @@ function SignupInner() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-secondary-700 mb-1.5"
+                  className="block text-sm font-medium text-secondary-800 mb-1.5"
                 >
-                  이메일
+                  Email
                 </label>
                 <Input
                   id="email"
@@ -171,28 +169,28 @@ function SignupInner() {
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "메일로 시작하기"
+                  "Send magic link"
                 )}
               </Button>
             </form>
           </div>
         )}
 
-        <p className="mt-6 text-center text-sm text-secondary-400">
-          이미 계정이 있나요?{" "}
+        <p className="mt-6 text-center text-sm text-secondary-700">
+          Already have an account?{" "}
           <Link
             href="/login"
             className="text-primary hover:text-primary-600 font-medium cursor-pointer"
           >
-            로그인
+            Log in
           </Link>
         </p>
 
         <Link
           href="/"
-          className="flex items-center justify-center gap-1 mt-4 text-sm text-secondary-400 hover:text-secondary-600 transition-colors cursor-pointer"
+          className="flex items-center justify-center gap-1 mt-4 text-sm text-secondary-700 hover:text-secondary-800 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-3 w-3" />홈으로
+          <ArrowLeft className="h-3 w-3" />Back home
         </Link>
       </div>
     </div>
