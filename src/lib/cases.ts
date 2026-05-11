@@ -77,8 +77,8 @@ export const CASES: CaseTemplate[] = [
 🍰 한입에 사라지는 진한 초콜릿 가나슈. 이번 주 새로 들어온 시그니처 디저트 만나보세요. 커피 한 잔이 더 깊어지는 페어링. #시그니처디저트 #초콜릿케이크 #디저트맛집 #카페신메뉴 #달콤한오후`,
     },
     youtube: [
-      { title: "AI 로 인스타 운영해서 월 500만원 (사례)", url: "https://youtube.com/<placeholder-1>" },
-      { title: "1인 인플루언서가 AI 직원 쓰는 법", url: "https://youtube.com/<placeholder-2>" },
+      { title: "AI 로 인스타 운영해서 월 500만원 (사례)", url: "https://www.youtube.com/results?search_query=AI+%EC%9D%B8%EC%8A%A4%ED%83%80+%EC%9E%90%EB%8F%99%ED%99%94+%EC%9B%94%EC%88%98%EC%9D%B5" },
+      { title: "1인 인플루언서가 AI 직원 쓰는 법", url: "https://www.youtube.com/results?search_query=1%EC%9D%B8+AI+%EC%9D%B8%ED%94%8C%EB%A3%A8%EC%96%B8%EC%84%9C+%EC%9E%90%EB%8F%99%ED%99%94" },
     ],
   },
   {
@@ -122,8 +122,8 @@ export const CASES: CaseTemplate[] = [
 **메타 디스크립션**: 노션 템플릿 추천 초보용 7가지를 직접 써본 후기와 함께 비교합니다. 일일 트래커·주간 리뷰·독서 노트 등.`,
     },
     youtube: [
-      { title: "AI 블로그 1개로 월 300만원 (실제 사례)", url: "https://youtube.com/<placeholder-1>" },
-      { title: "SEO 블로그 자동화 step-by-step", url: "https://youtube.com/<placeholder-2>" },
+      { title: "AI 블로그 1개로 월 300만원 (실제 사례)", url: "https://www.youtube.com/results?search_query=AI+%EB%B8%94%EB%A1%9C%EA%B7%B8+SEO+%EC%9B%94%EC%88%98%EC%9D%B5+%EC%9E%90%EB%8F%99%ED%99%94" },
+      { title: "SEO 블로그 자동화 step-by-step", url: "https://www.youtube.com/results?search_query=SEO+%EB%B8%94%EB%A1%9C%EA%B7%B8+AI+%EC%9E%90%EB%8F%99%ED%99%94" },
     ],
   },
   {
@@ -167,8 +167,8 @@ export const CASES: CaseTemplate[] = [
 [👉 풀스토리 읽기 / 광고 문의하기]`,
     },
     youtube: [
-      { title: "뉴스레터 1만 구독자로 월 200만원", url: "https://youtube.com/<placeholder-1>" },
-      { title: "AI 로 주 2회 뉴스레터 자동화", url: "https://youtube.com/<placeholder-2>" },
+      { title: "뉴스레터 1만 구독자로 월 200만원", url: "https://www.youtube.com/results?search_query=%EB%89%B4%EC%8A%A4%EB%A0%88%ED%84%B0+%EC%88%98%EC%9D%B5%ED%99%94+1%EB%A7%8C+%EA%B5%AC%EB%8F%85%EC%9E%90" },
+      { title: "AI 로 주 2회 뉴스레터 자동화", url: "https://www.youtube.com/results?search_query=AI+%EB%89%B4%EC%8A%A4%EB%A0%88%ED%84%B0+%EC%9E%90%EB%8F%99%ED%99%94" },
     ],
   },
   {
@@ -213,8 +213,8 @@ export const CASES: CaseTemplate[] = [
 [CTA] "오늘 한 줄이라도 메모 시작해보세요. 댓글로 한 줄 적어주시면 답변드릴게요."`,
     },
     youtube: [
-      { title: "쇼츠 자동화로 채널 키운 사례", url: "https://youtube.com/<placeholder-1>" },
-      { title: "AI 로 매일 쇼츠 3개 만드는 법", url: "https://youtube.com/<placeholder-2>" },
+      { title: "쇼츠 자동화로 채널 키운 사례", url: "https://www.youtube.com/results?search_query=AI+%EC%87%BC%EC%B8%A0+%EC%9E%90%EB%8F%99%ED%99%94+%EC%B1%84%EB%84%90+%EC%84%B1%EC%9E%A5" },
+      { title: "AI 로 매일 쇼츠 3개 만드는 법", url: "https://www.youtube.com/results?search_query=AI+%EB%A7%A4%EC%9D%BC+%EC%87%BC%EC%B8%A0+%EC%9E%90%EB%8F%99+%EC%83%9D%EC%84%B1" },
     ],
   },
   {
@@ -258,8 +258,8 @@ export const CASES: CaseTemplate[] = [
 CS Bot Co. 드림`,
     },
     youtube: [
-      { title: "CS 자동화로 외주 따낸 사례", url: "https://youtube.com/<placeholder-1>" },
-      { title: "1인 사장 AI 고객응대 만들기", url: "https://youtube.com/<placeholder-2>" },
+      { title: "CS 자동화로 외주 따낸 사례", url: "https://www.youtube.com/results?search_query=AI+CS+%EC%9E%90%EB%8F%99%ED%99%94+%EC%99%B8%EC%A3%BC" },
+      { title: "1인 사장 AI 고객응대 만들기", url: "https://www.youtube.com/results?search_query=1%EC%9D%B8+%EC%82%AC%EC%9E%A5+AI+%EA%B3%A0%EA%B0%9D%EC%9D%91%EB%8C%80" },
     ],
   },
 ];

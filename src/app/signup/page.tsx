@@ -31,38 +31,37 @@ function SignupInner() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !name) return;
-    setLoading(true);
     setError(null);
+    setLoading(true);
 
+    // 1) pre-register (≤1s, await) — name + caseId 저장
     try {
       await fetch("/api/user/pre-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, caseId: caseId ?? null }),
       });
-
-      const callbackUrl = caseId
-        ? `/onboarding/${caseId}`
-        : "/cases";
-
-      const result = await signIn("email", {
-        email,
-        redirect: false,
-        callbackUrl,
-      });
-
-      if (result?.error) {
-        setError("메일을 보내지 못했어요. 다시 시도해주세요.");
-        setLoading(false);
-      } else {
-        trackSignupCompleted("email");
-        setSent(true);
-        setLoading(false);
-      }
     } catch {
-      setError("문제가 생겼어요. 잠시 후 다시 시도해주세요.");
-      setLoading(false);
+      // 메일 발송이 본 경로라 pre-register 실패해도 막지 않음 (best-effort)
     }
+
+    // 2) signIn 은 fire-and-forget — NextAuth round-trip(~2s) 안 기다리고
+    //    사용자에게 즉시 "메일 보냈어요" 화면 보여주는 게 토스적. 실패 시 후속 감지.
+    const callbackUrl = caseId ? `/onboarding/${caseId}` : "/cases";
+    setSent(true);
+    setLoading(false);
+    trackSignupCompleted("email");
+
+    void signIn("email", { email, redirect: false, callbackUrl }).then(
+      (result) => {
+        if (result?.error) {
+          setError(
+            "메일 발송이 실패한 것 같아요. 잠시 후 다시 시도해주세요.",
+          );
+          setSent(false);
+        }
+      },
+    );
   };
 
   return (
