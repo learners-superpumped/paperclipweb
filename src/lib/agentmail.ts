@@ -61,7 +61,7 @@ export async function sendMagicLinkEmail(to: string, url: string) {
 }
 
 export async function sendCreditLowEmail(to: string, creditsRemaining: number, creditsLimit: number) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://paperclipweb.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
   const percent = Math.round((creditsRemaining / creditsLimit) * 100);
 
   return sendEmail({
@@ -100,7 +100,7 @@ export async function sendWelcomeEmail(to: string, name?: string) {
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
           Create your first Paperclip instance and start running AI agents in under 60 seconds.
         </p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://paperclipweb.app"}/dashboard" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app"}/dashboard" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
           Go to Dashboard
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">

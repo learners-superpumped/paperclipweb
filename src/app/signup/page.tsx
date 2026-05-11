@@ -1,52 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Paperclip, ArrowLeft, Mail, Loader2, Check } from "lucide-react";
+import { Paperclip, ArrowLeft, Mail, Loader2 } from "lucide-react";
 import {
   trackSignupStarted,
   trackSignupCompleted,
 } from "@/lib/analytics";
+import { findCase } from "@/lib/cases";
 
-export default function SignupPage() {
+function SignupInner() {
+  const searchParams = useSearchParams();
+  const caseId = searchParams.get("case");
+  const selectedCase = caseId ? findCase(caseId) : undefined;
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Page view is handled by AnalyticsProvider.
-  // Fire signup_started on mount — user intentionally navigated to signup.
   useEffect(() => {
     trackSignupStarted("email");
   }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !name) return;
     setLoading(true);
     setError(null);
 
     try {
+      await fetch("/api/user/pre-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, caseId: caseId ?? null }),
+      });
+
+      const callbackUrl = caseId
+        ? `/onboarding/${caseId}`
+        : "/cases";
+
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
 
       if (result?.error) {
-        setError("Failed to send verification email. Please try again.");
+        setError("메일을 보내지 못했어요. 다시 시도해주세요.");
         setLoading(false);
       } else {
-        // Magic link sent — treat this as signup completed (email method)
         trackSignupCompleted("email");
         setSent(true);
         setLoading(false);
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("문제가 생겼어요. 잠시 후 다시 시도해주세요.");
       setLoading(false);
     }
   };
@@ -55,19 +69,34 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 cursor-pointer mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 cursor-pointer mb-8"
+          >
             <Paperclip className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold text-secondary-800">
-              paperclipweb
+              paperclip
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-800">
-            Create your account
+            가입하기
           </h1>
           <p className="mt-2 text-sm text-secondary-500">
-            Start running your AI company in 60 seconds
+            이메일·이름만 — 비밀번호 없이 메일 한 번으로 끝.
           </p>
         </div>
+
+        {selectedCase && (
+          <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-secondary-700">
+            <div className="text-xs text-primary/80 mb-1">선택한 케이스</div>
+            <div className="font-semibold text-secondary-800">
+              {selectedCase.emoji} {selectedCase.company}
+            </div>
+            <div className="mt-1 text-secondary-600">
+              {selectedCase.oneLiner} · {selectedCase.mission}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive">
@@ -76,16 +105,20 @@ export default function SignupPage() {
         )}
 
         {sent ? (
-          <div className="rounded-xl border border-secondary-200 bg-white p-8 text-center">
+          <div
+            className="rounded-xl border border-secondary-200 bg-white p-8 text-center"
+            data-testid="signup-sent"
+          >
             <div className="mx-auto h-12 w-12 rounded-full bg-accent-50 flex items-center justify-center mb-4">
               <Mail className="h-6 w-6 text-accent" />
             </div>
             <h2 className="text-lg font-semibold text-secondary-800">
-              Check your email
+              메일을 확인해주세요
             </h2>
             <p className="mt-2 text-sm text-secondary-500">
-              We sent a verification link to{" "}
-              <span className="font-medium text-secondary-700">{email}</span>
+              <span className="font-medium text-secondary-700">{email}</span>{" "}
+              로 로그인 링크를 보냈어요. 메일의 링크 한 번 클릭으로 바로
+              시작합니다.
             </p>
             <Button
               variant="ghost"
@@ -93,32 +126,38 @@ export default function SignupPage() {
               onClick={() => setSent(false)}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Use a different email
+              다른 이메일 쓰기
             </Button>
           </div>
         ) : (
           <div className="rounded-xl border border-secondary-200 bg-white p-8">
-            {/* Benefits */}
-            <div className="mb-6 space-y-2">
-              {[
-                "Free 100 agent actions",
-                "No credit card required",
-                "Deploy in 60 seconds",
-              ].map((benefit) => (
-                <div key={benefit} className="flex items-center gap-2 text-sm text-secondary-600">
-                  <Check className="h-4 w-4 text-accent shrink-0" />
-                  {benefit}
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form
+              onSubmit={handleSignup}
+              className="space-y-4"
+              data-testid="signup-form"
+            >
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-secondary-700 mb-1.5"
+                >
+                  이름
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="홍길동"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
               <div>
                 <label
                   htmlFor="email"
                   className="block text-sm font-medium text-secondary-700 mb-1.5"
                 >
-                  Email address
+                  이메일
                 </label>
                 <Input
                   id="email"
@@ -133,31 +172,20 @@ export default function SignupPage() {
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Create Account"
+                  "메일로 시작하기"
                 )}
               </Button>
             </form>
-
-            <p className="mt-4 text-xs text-secondary-400 text-center">
-              By signing up, you agree to our{" "}
-              <a href="#" className="underline cursor-pointer">
-                Terms
-              </a>{" "}
-              and{" "}
-              <a href="#" className="underline cursor-pointer">
-                Privacy Policy
-              </a>
-            </p>
           </div>
         )}
 
         <p className="mt-6 text-center text-sm text-secondary-400">
-          Already have an account?{" "}
+          이미 계정이 있나요?{" "}
           <Link
             href="/login"
             className="text-primary hover:text-primary-600 font-medium cursor-pointer"
           >
-            Log in
+            로그인
           </Link>
         </p>
 
@@ -165,10 +193,17 @@ export default function SignupPage() {
           href="/"
           className="flex items-center justify-center gap-1 mt-4 text-sm text-secondary-400 hover:text-secondary-600 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-3 w-3" />
-          Back to home
+          <ArrowLeft className="h-3 w-3" />홈으로
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupInner />
+    </Suspense>
   );
 }

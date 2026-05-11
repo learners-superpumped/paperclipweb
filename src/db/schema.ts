@@ -158,6 +158,33 @@ export const invoices = paperclipwebSchema.table(
   ]
 );
 
+// ─── Signup Intents ───
+// signup form 에서 받은 name + 선택한 caseId 를 magic link 인증 전에 임시 저장.
+// NextAuth events.createUser/signIn 콜백에서 email 매칭으로 users 에 적용.
+export const signupIntents = paperclipwebSchema.table("signup_intents", {
+  email: text("email").primaryKey(),
+  name: text("name").notNull(),
+  caseId: text("case_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+});
+
+// ─── Mock Companies (결제 전 온보딩 결과) ───
+// mock 단계의 회사·CTO·첫 task 결과. 결제 후 진짜 인스턴스로 이관.
+export const mockCompanies = paperclipwebSchema.table("mock_companies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  caseId: text("case_id").notNull(),
+  companyName: text("company_name").notNull(),
+  payloadJson: text("payload_json").notNull(), // 회사·직원·첫 task 결과 JSON
+  firstTaskResult: text("first_task_result"),
+  firstTaskEmailSentAt: timestamp("first_task_email_sent_at", { withTimezone: true }),
+  migratedToCompanyId: uuid("migrated_to_company_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("mock_companies_user_idx").on(table.userId),
+]);
+
 // ─── Drip Emails ───
 export const dripEmails = paperclipwebSchema.table(
   "drip_emails",

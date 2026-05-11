@@ -7,17 +7,27 @@ import { Loader2 } from "lucide-react";
 import { trackMagicLinkVerified } from "@/lib/analytics";
 
 export default function OnboardingRedirectPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
     if (status === "authenticated") {
-      trackMagicLinkVerified("pricing");
-      router.replace("/pricing");
+      trackMagicLinkVerified("cases");
+      let caseId: string | null = null;
+      try {
+        const onb = (session?.user as { onboardingData?: string })?.onboardingData;
+        if (onb) {
+          const parsed = JSON.parse(onb) as { caseId?: string | null };
+          caseId = parsed?.caseId ?? null;
+        }
+      } catch {
+        caseId = null;
+      }
+      router.replace(caseId ? `/onboarding/${caseId}` : "/cases");
     } else if (status === "unauthenticated") {
       router.replace("/login");
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

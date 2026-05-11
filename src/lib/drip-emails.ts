@@ -5,7 +5,7 @@ interface OnboardingData {
   competitors: string;
 }
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://paperclipweb.app";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
 
 function pricingLink(day: number) {
   return `${appUrl}/pricing?utm_source=email&utm_campaign=drip_d${day}`;
