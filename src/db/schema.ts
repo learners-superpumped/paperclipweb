@@ -101,8 +101,12 @@ export const companies = paperclipwebSchema.table(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    slug: text("slug").unique(), // 인스턴스 path/sub-domain 식별자
+    caseId: text("case_id"), // 어떤 케이스 템플릿에서 시작했는지
+    employeesJson: text("employees_json"), // 이관된 직원 배열 (CaseEmployee[])
     status: text("status").notNull().default("provisioning"), // provisioning, running, stopped, error
-    paperclipCompanyId: text("paperclip_company_id"), // ID in the Paperclip instance
+    mockMode: boolean("mock_mode").notNull().default(true),
+    paperclipCompanyId: text("paperclip_company_id"),
     paperclipVersion: text("paperclip_version").default("latest"),
     instanceUrl: text("instance_url"),
     creditsUsed: integer("credits_used").notNull().default(0),
@@ -111,8 +115,27 @@ export const companies = paperclipwebSchema.table(
   },
   (table) => [
     index("companies_user_idx").on(table.userId),
+    index("companies_slug_idx").on(table.slug),
   ]
 );
+
+// ─── Tasks (사용자가 인스턴스 안에서 직원에게 시키는 작업) ───
+export const tasks = paperclipwebSchema.table("tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  inputPrompt: text("input_prompt").notNull(),
+  status: text("status").notNull().default("running"), // running, done, failed
+  resultMarkdown: text("result_markdown"),
+  creditsUsed: integer("credits_used").notNull().default(0),
+  isMock: boolean("is_mock").notNull().default(true), // mock 데이터 (결제 전) vs Opus 호출 (결제 후)
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+}, (table) => [
+  index("tasks_company_idx").on(table.companyId),
+  index("tasks_user_idx").on(table.userId),
+]);
 
 // ─── Credit Transactions ───
 export const creditTransactions = paperclipwebSchema.table(
