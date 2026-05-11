@@ -9,7 +9,11 @@ interface SendEmailParams {
 
 export async function sendEmail({ to, subject, body, bodyType = "html" }: SendEmailParams) {
   const apiKey = process.env.AGENTMAIL_API_KEY;
-  const fromAddress = process.env.AGENTMAIL_FROM_ADDRESS || "paperclipweb@agentmail.to";
+  // 우선순위: AGENTMAIL_FROM_INBOX (vault 키 이름) → AGENTMAIL_FROM_ADDRESS (옛 vercel env 이름) → hello@usepaperclip.app (default).
+  const fromAddress =
+    process.env.AGENTMAIL_FROM_INBOX ||
+    process.env.AGENTMAIL_FROM_ADDRESS ||
+    "hello@usepaperclip.app";
 
   if (!apiKey) {
     console.warn("[AgentMail] AGENTMAIL_API_KEY not set, skipping email send");
@@ -31,8 +35,12 @@ export async function sendEmail({ to, subject, body, bodyType = "html" }: SendEm
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[AgentMail] Send failed:", response.status, text);
-    throw new Error(`AgentMail send failed: ${response.status}`);
+    console.error(
+      `[AgentMail] Send failed (from=${fromAddress} to=${to}): ${response.status} ${text}`,
+    );
+    throw new Error(
+      `AgentMail send failed: ${response.status} (from=${fromAddress})`,
+    );
   }
 
   return response.json();
