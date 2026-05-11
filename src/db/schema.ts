@@ -165,10 +165,6 @@ export const signupIntents = paperclipwebSchema.table("signup_intents", {
   email: text("email").primaryKey(),
   name: text("name").notNull(),
   caseId: text("case_id"),
-  // dev-loop QA 자동 인증 전용 — NextAuth EmailProvider 가 발급한 최신 magic link URL.
-  // codex 가 sql 로 가져가 callback 호출. consumedAt 박힌 후 cleanup 권장. raw token 보유 — 외부 노출 금지.
-  lastMagicLink: text("last_magic_link"),
-  lastMagicLinkAt: timestamp("last_magic_link_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 });
