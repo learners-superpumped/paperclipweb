@@ -77,6 +77,21 @@ const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        // applySignupIntent 가 createUser/signIn event 안에서 users.name 을 채워 둠.
+        // jwt callback 시점에 NextAuth 가 전달하는 user 객체는 createUser 직전 상태라 name 이 없을 수 있다.
+        // DB 에서 최신 name 다시 가져와 token 에 반영해야 session.user.name 이 올바르게 들어간다.
+        try {
+          if (user.id) {
+            const [u] = await db()
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, user.id as string))
+              .limit(1);
+            if (u?.name) token.name = u.name;
+          }
+        } catch (err) {
+          console.error("[Auth] jwt callback name refresh failed:", err);
+        }
       }
       return token;
     },
