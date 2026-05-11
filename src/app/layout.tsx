@@ -116,10 +116,10 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: "/og.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "paperclipweb — Managed Paperclip hosting with bundled AI credits",
+        alt: "paperclip — AI 직원 채용해서 자동으로 돈 버는 회사",
         type: "image/png",
       },
     ],
@@ -129,7 +129,7 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} — One bill. One click. Your AI company.`,
     description:
       "Managed Paperclip hosting with bundled AI credits. Deploy autonomous AI agents in 60 seconds.",
-    images: ["/og.png"],
+    images: ["/opengraph-image"],
     creator: "@paperclipweb",
     site: "@paperclipweb",
   },
@@ -147,12 +147,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: ["/icon.svg"],
   },
   manifest: "/manifest.webmanifest",
   verification: {

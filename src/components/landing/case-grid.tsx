@@ -54,16 +54,8 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                 </div>
                 <div className="mt-2 space-y-1">
                   {c.youtube.map((y, i) => (
-                    <div key={i}>
-                      <a
-                        href={y.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline decoration-secondary-300 hover:decoration-primary"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        ▶ {y.title}
-                      </a>
+                    <div key={i} className="text-secondary-600">
+                      ▶ {y.title}
                     </div>
                   ))}
                 </div>

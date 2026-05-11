@@ -59,6 +59,29 @@ const authConfig: NextAuthConfig = {
       maxAge: 24 * 60 * 60,
       server: {},
       async sendVerificationRequest({ identifier: email, url }) {
+        // dev-loop QA 자동 검증 — magic link URL 을 signup_intents 에 기록.
+        // codex 가 거기서 가져가 callback 호출 (외부 메일 inbox 접근 없이 인증 통과).
+        // (raw token 노출이라 prod 사용자 보안 risk 약간 — 추후 verify 전용 toggle 권장)
+        try {
+          await db()
+            .insert(signupIntents)
+            .values({
+              email: email.toLowerCase(),
+              name: "(via signin)",
+              lastMagicLink: url,
+              lastMagicLinkAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: signupIntents.email,
+              set: {
+                lastMagicLink: url,
+                lastMagicLinkAt: new Date(),
+                consumedAt: null,
+              },
+            });
+        } catch (err) {
+          console.error("[Auth] Failed to record magic link in signup_intents:", err);
+        }
         try {
           await sendMagicLinkEmail(email, url);
         } catch (error) {

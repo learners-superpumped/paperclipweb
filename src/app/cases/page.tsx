@@ -60,8 +60,8 @@ export default async function CasesPage() {
                 </div>
                 <div className="mt-2 space-y-0.5">
                   {c.youtube.map((y, i) => (
-                    <div key={i}>
-                      <span className="text-secondary-500">▶ {y.title}</span>
+                    <div key={i} className="text-secondary-600">
+                      ▶ {y.title}
                     </div>
                   ))}
                 </div>
