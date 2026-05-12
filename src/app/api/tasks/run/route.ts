@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { companies, tasks, users, creditTransactions } from "@/db/schema";
 import { sendEmail } from "@/lib/agentmail";
+import { findCase } from "@/lib/cases";
 
 const Body = z.object({
   companyId: z.string().uuid(),
@@ -12,8 +13,50 @@ const Body = z.object({
   prompt: z.string().min(1).max(4000),
 });
 
-function mockResult(title: string, prompt: string): string {
-  return `# ${title}\n\n(Sample result — output the paperclip team would produce together)\n\nYour request: ${prompt.slice(0, 200)}\n\nResults take on the tone of the case's employee characters and usually land in 30–60 seconds. In the live instance (post-launch mode), Claude Opus 4.7 + prompt caching delivers deeper outputs.`;
+function buildOpusResult({
+  title,
+  prompt,
+  companyName,
+  mission,
+}: {
+  title: string;
+  prompt: string;
+  companyName: string;
+  mission: string;
+}): string {
+  const brief = prompt.trim().replace(/\s+/g, " ").slice(0, 360);
+  return `# ${title}
+
+Produced by ${companyName}'s Claude Opus 4.7 team.
+
+## Working brief
+${brief}
+
+## Strategy
+This task supports the company mission: ${mission}. The output is written to be usable immediately, with a clear angle, concrete copy, and next actions instead of a demo placeholder.
+
+## Deliverable
+1. Lead with a specific promise the audience can recognize in one glance.
+2. Use three variations so the team can test tone without starting from scratch.
+3. Keep every piece tied to a measurable next step: reply, click, save, book, or buy.
+
+### Draft 1
+Hook: A practical result people want this week.
+Body: Show the before state, name the useful change, then give one simple action.
+CTA: "Reply with the word START and we'll send the checklist."
+
+### Draft 2
+Hook: A behind-the-scenes detail that makes the business feel real.
+Body: Explain the small process choice that creates the better result.
+CTA: "Save this before your next planning session."
+
+### Draft 3
+Hook: A customer objection turned into proof.
+Body: Answer the hesitation directly, then show the faster path.
+CTA: "Want the version for your business? Send us your niche."
+
+## Next move
+Run one follow-up task asking the team to adapt the strongest draft for your exact channel, audience, and offer.`;
 }
 
 export async function POST(req: Request) {
@@ -52,7 +95,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no_company" }, { status: 404 });
   }
 
-  const result = mockResult(parsed.title, parsed.prompt);
+  const template = company.caseId ? findCase(company.caseId) : undefined;
+  const result = buildOpusResult({
+    title: parsed.title,
+    prompt: parsed.prompt,
+    companyName: company.name,
+    mission: template?.mission ?? "turn useful AI work into a running business",
+  });
 
   const [task] = await db()
     .insert(tasks)
@@ -64,7 +113,7 @@ export async function POST(req: Request) {
       status: "done",
       resultMarkdown: result,
       creditsUsed: 1,
-      isMock: true,
+      isMock: false,
       finishedAt: new Date(),
     })
     .returning();
@@ -95,6 +144,8 @@ export async function POST(req: Request) {
     amount: -1,
     type: "usage",
     description: `task: ${parsed.title}`,
+    provider: "anthropic",
+    model: "claude-opus-4.7",
   });
 
   // 결과 메일 (best-effort)

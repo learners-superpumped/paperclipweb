@@ -36,6 +36,15 @@ type MockPayload = {
   };
 };
 
+function parseMockPayload(payloadJson: string | null): MockPayload | null {
+  if (!payloadJson) return null;
+  try {
+    return JSON.parse(payloadJson) as MockPayload;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.email) {
@@ -56,24 +65,6 @@ export async function POST(req: Request) {
     .limit(1);
   if (!user) {
     return NextResponse.json({ error: "no_user" }, { status: 404 });
-  }
-
-  // idempotency — 이미 active subscription + company 있으면 그 slug 반환 (재요청 시 중복 spawn 회피).
-  const [activeSub] = await db()
-    .select()
-    .from(subscriptions)
-    .where(and(eq(subscriptions.userId, user.id), eq(subscriptions.status, "active")))
-    .limit(1);
-  if (activeSub) {
-    const [existing] = await db()
-      .select()
-      .from(companies)
-      .where(eq(companies.userId, user.id))
-      .orderBy(desc(companies.createdAt))
-      .limit(1);
-    if (existing?.slug) {
-      return NextResponse.json({ ok: true, slug: existing.slug, idempotent: true });
-    }
   }
 
   // mock_companies 마지막 row 가져와 이관. 없으면 caseId 로 minimal company 생성.
@@ -99,13 +90,73 @@ export async function POST(req: Request) {
   const caseId = mock?.caseId ?? parsed.caseId ?? "ai-blog-seo";
   const template = findCase(caseId);
   const companyName = mock?.companyName ?? template?.company ?? "AI Company";
-  const mockPayload = mock?.payloadJson
-    ? (JSON.parse(mock.payloadJson) as MockPayload)
-    : null;
+  const mockPayload = parseMockPayload(mock?.payloadJson ?? null);
   const employeesJson =
     mockPayload
       ? mockPayload.employees ?? null
       : template?.employees ?? null;
+  const firstTask = mockPayload?.sampleTask ?? template?.sampleTask;
+  const firstTaskResult =
+    mock?.firstTaskResult ?? firstTask?.presetResult ?? template?.sampleTask.presetResult;
+
+  // idempotency — 이미 active subscription + company 있으면 그 slug 반환 (재요청 시 중복 spawn 회피).
+  const [activeSub] = await db()
+    .select()
+    .from(subscriptions)
+    .where(and(eq(subscriptions.userId, user.id), eq(subscriptions.status, "active")))
+    .limit(1);
+  if (activeSub) {
+    const [existing] = await db()
+      .select()
+      .from(companies)
+      .where(eq(companies.userId, user.id))
+      .orderBy(desc(companies.createdAt))
+      .limit(1);
+    if (existing?.slug) {
+      if (mock) {
+        const nextEmployeesJson = employeesJson ? JSON.stringify(employeesJson) : existing.employeesJson;
+        await db()
+          .update(companies)
+          .set({
+            name: companyName,
+            caseId,
+            employeesJson: nextEmployeesJson,
+            status: "running",
+            mockMode: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(companies.id, existing.id));
+
+        if (firstTask?.title && firstTaskResult) {
+          const [existingTask] = await db()
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(and(eq(tasks.companyId, existing.id), eq(tasks.title, firstTask.title)))
+            .limit(1);
+          if (!existingTask) {
+            await db().insert(tasks).values({
+              companyId: existing.id,
+              userId: user.id,
+              title: firstTask.title,
+              inputPrompt: firstTask.description ?? firstTask.title,
+              status: "done",
+              resultMarkdown: firstTaskResult,
+              creditsUsed: 0,
+              isMock: true,
+              finishedAt: new Date(),
+            });
+          }
+        }
+
+        await db()
+          .update(mockCompanies)
+          .set({ migratedToCompanyId: existing.id })
+          .where(eq(mockCompanies.id, mock.id));
+      }
+      return NextResponse.json({ ok: true, slug: existing.slug, idempotent: true });
+    }
+  }
+
   const slug = makeSlug(companyName);
 
   const [company] = await db()
@@ -149,10 +200,6 @@ export async function POST(req: Request) {
     type: "subscription",
     description: "Pro subscription (mock) — 100 actions credited",
   });
-
-  const firstTask = mockPayload?.sampleTask ?? template?.sampleTask;
-  const firstTaskResult =
-    mock?.firstTaskResult ?? firstTask?.presetResult ?? template?.sampleTask.presetResult;
 
   if (firstTask?.title && firstTaskResult) {
     await db().insert(tasks).values({

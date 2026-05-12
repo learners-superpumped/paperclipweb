@@ -18,13 +18,17 @@ export async function POST() {
     .limit(1);
   if (!user) return NextResponse.json({ error: "no_user" }, { status: 404 });
 
-  await db()
+  const [updatedUser] = await db()
     .update(users)
     .set({
       creditsBalance: sql`${users.creditsBalance} + ${TOPUP.credits}`,
       creditsLimit: sql`${users.creditsLimit} + ${TOPUP.credits}`,
     })
-    .where(eq(users.id, user.id));
+    .where(eq(users.id, user.id))
+    .returning({
+      creditsBalance: users.creditsBalance,
+      creditsLimit: users.creditsLimit,
+    });
 
   await db().insert(creditTransactions).values({
     userId: user.id,
@@ -33,5 +37,9 @@ export async function POST() {
     description: `$${TOPUP.price} top up = ${TOPUP.credits} actions (mock)`,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    creditsBalance: updatedUser?.creditsBalance ?? user.creditsBalance + TOPUP.credits,
+    creditsLimit: updatedUser?.creditsLimit ?? user.creditsLimit + TOPUP.credits,
+  });
 }

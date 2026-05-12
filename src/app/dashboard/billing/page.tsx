@@ -48,7 +48,7 @@ export default async function BillingPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
         <h1 className="text-2xl font-bold text-secondary-800">Billing & top up</h1>
 
         <section
@@ -134,7 +134,7 @@ export default async function BillingPage() {
             </ul>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

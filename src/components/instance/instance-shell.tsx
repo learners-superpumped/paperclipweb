@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, Mail, Plus, Pencil } from "lucide-react";
+import { TOPUP } from "@/lib/constants";
+import { Loader2, ArrowRight, Mail, Plus, Pencil, CreditCard, Check } from "lucide-react";
 
 interface TaskRow {
   id: string;
@@ -50,7 +51,12 @@ export function InstanceShell({
   const [taskPrompt, setTaskPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const firstName = (user.name ?? "친구").split(" ")[0];
+  const [topupOpen, setTopupOpen] = useState(false);
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupSuccess, setTopupSuccess] = useState(false);
+  const [topupError, setTopupError] = useState<string | null>(null);
+  const [topupCard, setTopupCard] = useState("");
+  const firstName = (user.name ?? "friend").split(" ")[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +125,40 @@ export function InstanceShell({
     setEmployeeRole("");
   };
 
+  const handleTopup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTopupError(null);
+    setTopupSuccess(false);
+    setTopupLoading(true);
+    try {
+      const res = await fetch("/api/checkout/mock-topup", {
+        method: "POST",
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        creditsBalance?: number;
+        creditsLimit?: number;
+      };
+      if (!res.ok || !data.ok) {
+        setTopupError(data.error ?? "Top up failed. Try another card.");
+        setTopupLoading(false);
+        return;
+      }
+      setCredits({
+        balance: data.creditsBalance ?? credits.balance + TOPUP.credits,
+        limit: data.creditsLimit ?? credits.limit + TOPUP.credits,
+      });
+      setTopupSuccess(true);
+      setTopupCard("");
+      router.refresh();
+      setTopupLoading(false);
+    } catch {
+      setTopupError("Top up failed. Try another card.");
+      setTopupLoading(false);
+    }
+  };
+
   const lowBalance = credits.balance <= 10;
   const zeroBalance = credits.balance <= 0;
 
@@ -139,12 +179,18 @@ export function InstanceShell({
             >
               Credits {credits.balance} / {credits.limit}
             </div>
-            <Link
-              href="/dashboard/billing"
+            <button
+              type="button"
               className="text-primary hover:underline"
+              onClick={() => {
+                setTopupOpen((open) => !open);
+                setTopupSuccess(false);
+                setTopupError(null);
+              }}
+              data-testid="topup-open-btn"
             >
               Top up
-            </Link>
+            </button>
           </div>
         </div>
       </header>
@@ -154,7 +200,7 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-6 rounded-xl border border-accent/30 bg-accent-50 text-secondary-800 p-4 text-sm"
           data-testid="just-paid-banner"
         >
-          🎉 Payment complete — {visibleCompanyName} is live. Everything you built in the mock (company, team, first task) is right here.
+          Payment complete — {visibleCompanyName} is live. Everything you built in the mock (company, team, first task) is right here.
         </div>
       )}
 
@@ -184,7 +230,71 @@ export function InstanceShell({
         </div>
       )}
 
-      <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+        {topupOpen && (
+          <section
+            className="rounded-2xl border border-primary/30 bg-white p-6 shadow-sm"
+            data-testid="topup-checkout"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-secondary-800">
+                  Top up credits
+                </h2>
+                <p className="mt-1 text-sm text-secondary-700">
+                  ${TOPUP.price} / {TOPUP.credits} actions. Applied instantly to this account.
+                </p>
+              </div>
+              <div className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary">
+                ${TOPUP.price}
+              </div>
+            </div>
+
+            <form onSubmit={handleTopup} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <label className="sr-only" htmlFor="topup-card">
+                Card number
+              </label>
+              <Input
+                id="topup-card"
+                inputMode="numeric"
+                autoComplete="cc-number"
+                placeholder="4242 4242 4242 4242"
+                value={topupCard}
+                onChange={(e) => setTopupCard(e.target.value)}
+                data-testid="topup-card"
+                required
+              />
+              <Button
+                type="submit"
+                className="gap-2"
+                disabled={topupLoading}
+                data-testid="topup-submit"
+              >
+                {topupLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4" />
+                    Pay ${TOPUP.price}
+                  </>
+                )}
+              </Button>
+            </form>
+
+            {topupError && (
+              <div className="mt-3 text-sm text-destructive" data-testid="topup-error">
+                {topupError}
+              </div>
+            )}
+            {topupSuccess && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-accent" data-testid="topup-success">
+                <Check className="h-4 w-4" />
+                Top up complete. Credits are now {credits.balance} / {credits.limit}.
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="rounded-2xl border border-secondary-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-secondary-800 mb-3">
             {firstName}'s {visibleCompanyName} — team roster
@@ -326,6 +436,11 @@ export function InstanceShell({
                       {new Date(t.createdAt).toLocaleString("en-US")}
                     </div>
                   </div>
+                  {!t.isMock && (
+                    <div className="mb-2 inline-flex rounded-full bg-accent-50 px-2 py-0.5 text-[11px] font-medium text-accent">
+                      Claude Opus 4.7 result
+                    </div>
+                  )}
                   {t.resultMarkdown && (
                     <pre className="mt-2 whitespace-pre-wrap text-xs text-secondary-700 bg-secondary-50 border border-secondary-100 rounded p-3">
                       {t.resultMarkdown}
@@ -341,7 +456,7 @@ export function InstanceShell({
             </ul>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 }

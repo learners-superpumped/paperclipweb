@@ -197,7 +197,9 @@ export default function RootLayout({
       </head>
       <body className="font-sans">
         <SessionProvider>
-          <AnalyticsProvider>{children}</AnalyticsProvider>
+          <AnalyticsProvider>
+            <main id="main-content">{children}</main>
+          </AnalyticsProvider>
         </SessionProvider>
       </body>
     </html>
