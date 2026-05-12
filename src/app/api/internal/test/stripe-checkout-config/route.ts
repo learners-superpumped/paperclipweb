@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { ensurePrice } from "@/lib/stripe-ensure";
 import { getStripe } from "@/lib/stripe";
+import { guardQaTestRoute } from "@/lib/qa-test-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +10,11 @@ const EXPECTED_AMOUNT = 2900; // $29/month
 const EXPECTED_INTERVAL = "month";
 
 // QA endpoint: verifies Stripe checkout config is correct.
-// If STRIPE_TEST_MODE=true + STRIPE_SECRET_KEY_TEST, also creates a real test session.
-// Protected by CRON_SECRET.
-export async function GET(req: Request) {
-  const headersList = await headers();
-  const auth = headersList.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+// live 모드 (STRIPE_TEST_MODE=false AND PAPERCLIP_PAYMENT_MOCK=false) 에서는 404.
+// test/mock 모드 + CRON_SECRET bearer 둘 다 만족할 때만 동작.
+export async function GET() {
+  const blocked = await guardQaTestRoute();
+  if (blocked) return blocked;
 
   const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
   const isTestMode = process.env.STRIPE_TEST_MODE === "true";

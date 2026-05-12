@@ -14,11 +14,10 @@ import {
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
 import type Stripe from "stripe";
 
-// Plan prices for server-side event properties
+// Plan prices for server-side event properties. spec.md ## 6 pricing SoT: 단일 플랜 Pro $29/mo.
 const PLAN_PRICES: Record<string, number> = {
   free: 0,
-  starter: 19,
-  pro: 49,
+  pro: 29,
 };
 
 export async function POST(req: Request) {

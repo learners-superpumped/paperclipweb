@@ -51,7 +51,9 @@ export async function POST(req: Request) {
     metadata: {
       userId: user.id,
       caseId: caseId ?? "",
-      plan: "starter",
+      // spec.md ## 6 pricing: 단일 플랜 Pro $29/mo / 100 actions / 1 instance.
+      // 이 unitAmount(2900) 와 webhook 의 PLAN_PRICES.pro($29), PLAN_CREDITS.pro(100) 가 일치.
+      plan: "pro",
     },
   });
 

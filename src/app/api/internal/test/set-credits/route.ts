@@ -1,20 +1,17 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, creditTransactions } from "@/db/schema";
+import { guardQaTestRoute } from "@/lib/qa-test-guard";
 
 export const dynamic = "force-dynamic";
 
 // QA-only endpoint: set a user's credits balance to an arbitrary value.
-// Protected by CRON_SECRET bearer token.
+// live 모드 (STRIPE_TEST_MODE=false AND PAPERCLIP_PAYMENT_MOCK=false) 에서는 404 — endpoint 존재 자체 숨김.
+// test/mock 모드 + CRON_SECRET bearer 둘 다 만족할 때만 동작.
 export async function POST(req: Request) {
-  const headersList = await headers();
-  const auth = headersList.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const blocked = await guardQaTestRoute();
+  if (blocked) return blocked;
 
   const { email, balance } = (await req.json()) as { email?: string; balance?: number };
   if (!email || typeof balance !== "number") {

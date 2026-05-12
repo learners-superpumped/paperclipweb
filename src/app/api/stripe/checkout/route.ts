@@ -4,8 +4,9 @@ import { getAuthUser } from "@/lib/auth-helpers";
 import { getUserById, updateUser } from "@/lib/queries";
 import { getStripe, getPriceId, TOPUP_PRICE_IDS } from "@/lib/stripe";
 
+// spec.md ## 6 pricing: 단일 플랜 Pro 만.
 const CheckoutSchema = z.object({
-  plan: z.enum(["starter", "pro"]).optional(),
+  plan: z.enum(["pro"]).optional(),
   topup: z.enum(["small", "medium", "large"]).optional(),
 });
 

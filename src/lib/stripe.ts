@@ -23,11 +23,8 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-// Plan to Stripe Price ID mapping
-export function getPriceId(plan: "starter" | "pro"): string {
-  if (plan === "starter") {
-    return process.env.STRIPE_STARTER_PRICE_ID || "price_starter_monthly";
-  }
+// Plan to Stripe Price ID mapping. spec.md ## 6: 단일 플랜 Pro 만.
+export function getPriceId(plan: "pro"): string {
   return process.env.STRIPE_PRO_PRICE_ID || "price_pro_monthly";
 }
 
@@ -38,9 +35,10 @@ export const TOPUP_PRICE_IDS: Record<string, { credits: number; price: number }>
   large: { credits: 5000, price: 8750 },   // $87.50
 };
 
-// Plan credit limits
+// Plan credit limits — spec.md ## 6 pricing SoT.
+// free: 가입 직후 (한도 0, mock 온보딩만 가능).
+// pro: $29/mo / 100 actions / 1 instance.
 export const PLAN_CREDITS: Record<string, { balance: number; limit: number }> = {
-  free: { balance: 100, limit: 100 },
-  starter: { balance: 1000, limit: 1000 },
-  pro: { balance: 3000, limit: 3000 },
+  free: { balance: 0, limit: 0 },
+  pro: { balance: 100, limit: 100 },
 };

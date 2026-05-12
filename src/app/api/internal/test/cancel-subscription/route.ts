@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, subscriptions, companies } from "@/db/schema";
 import { PLAN_CREDITS } from "@/lib/stripe";
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
+import { guardQaTestRoute } from "@/lib/qa-test-guard";
 
 export const dynamic = "force-dynamic";
 
 // QA-only endpoint: simulate subscription cancellation for a user.
-// Protected by CRON_SECRET bearer token.
+// live 모드 (STRIPE_TEST_MODE=false AND PAPERCLIP_PAYMENT_MOCK=false) 에서는 404.
+// test/mock 모드 + CRON_SECRET bearer 둘 다 만족할 때만 동작.
 export async function POST(req: Request) {
-  const headersList = await headers();
-  const auth = headersList.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const blocked = await guardQaTestRoute();
+  if (blocked) return blocked;
 
   const { email } = (await req.json()) as { email?: string };
   if (!email) {
