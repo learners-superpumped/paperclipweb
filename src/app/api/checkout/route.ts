@@ -14,7 +14,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
+  // STRIPE_TEST_MODE + STRIPE_SECRET_KEY_TEST takes priority over PAPERCLIP_PAYMENT_MOCK:
+  // lets QA verify run real Stripe test checkout even when mock mode is on.
+  const isStripeTestActive =
+    process.env.STRIPE_TEST_MODE === "true" && !!process.env.STRIPE_SECRET_KEY_TEST;
+  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true" && !isStripeTestActive;
   if (isMock) {
     return NextResponse.json({ url: "/checkout/mock-success" });
   }

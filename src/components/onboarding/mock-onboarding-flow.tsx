@@ -158,7 +158,7 @@ export function MockOnboardingFlow({
           </StepCard>
         )}
 
-        {stage === "task_done" && (
+        {(stage === "running_task" || stage === "task_done") && (
           <div ref={upgradeHookRef}>
             <UpgradeHook template={template} />
           </div>

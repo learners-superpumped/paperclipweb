@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { sendCreditLowEmail } from "@/lib/agentmail";
+import { guardQaTestRoute } from "@/lib/qa-test-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +17,8 @@ export const dynamic = "force-dynamic";
 //
 // Returns: { ok: true, email, threshold, creditsLimit }
 export async function POST(req: Request) {
-  const headersList = await headers();
-  const auth = headersList.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const blocked = await guardQaTestRoute();
+  if (blocked) return blocked;
 
   const body = (await req.json().catch(() => ({}))) as { email?: string; threshold?: number };
   const { email, threshold } = body;

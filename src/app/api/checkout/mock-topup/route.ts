@@ -6,6 +6,12 @@ import { users, creditTransactions } from "@/db/schema";
 import { TOPUP } from "@/lib/constants";
 
 export async function POST() {
+  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
+  const isTest = process.env.STRIPE_TEST_MODE === "true";
+  if (!isMock && !isTest) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
