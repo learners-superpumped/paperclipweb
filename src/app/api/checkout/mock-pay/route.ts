@@ -122,7 +122,7 @@ export async function POST(req: Request) {
             caseId,
             employeesJson: nextEmployeesJson,
             status: "running",
-            mockMode: true,
+            mockMode: false,
             updatedAt: new Date(),
           })
           .where(eq(companies.id, existing.id));
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
       caseId,
       employeesJson: employeesJson ? JSON.stringify(employeesJson) : null,
       status: "running",
-      mockMode: true,
+      mockMode: false,
       instanceUrl: `/i/${slug}`,
     })
     .returning();
