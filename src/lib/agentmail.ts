@@ -68,27 +68,105 @@ export async function sendMagicLinkEmail(to: string, url: string) {
   });
 }
 
-export async function sendCreditLowEmail(to: string, creditsRemaining: number, creditsLimit: number) {
+export async function sendCreditLowEmail(to: string, creditsRemaining: number, creditsLimit: number, threshold?: number) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
   const percent = Math.round((creditsRemaining / creditsLimit) * 100);
+  const thresholdLabel = threshold ? `${threshold} credits` : `${percent}%`;
 
   return sendEmail({
     to,
-    subject: `[paperclipweb] Credits running low (${percent}% remaining)`,
+    subject: `[Paperclip] ${creditsRemaining} actions left — top up to keep going`,
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
-        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your credits are running low</h2>
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your credits are running low (${thresholdLabel} alert)</h2>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
-          You have <strong>${creditsRemaining} of ${creditsLimit}</strong> credits remaining this month (${percent}%).
+          You have <strong>${creditsRemaining} of ${creditsLimit}</strong> actions remaining this month.
         </p>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-          Top up your credits or upgrade your plan to keep your agents running smoothly.
+          Top up $10 for 50 more actions — applied instantly, no plan change needed.
         </p>
         <a href="${appUrl}/dashboard/billing" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Top Up Credits
+          Top Up — $10 / 50 actions
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
-          You can manage your subscription at ${appUrl}/dashboard/billing
+          Manage your account at ${appUrl}/dashboard/billing
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendSubscriptionCancelledEmail(to: string, name?: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
+  const firstName = (name ?? "there").split(" ")[0];
+
+  return sendEmail({
+    to,
+    subject: "[Paperclip] Your subscription has been cancelled",
+    body: `
+      <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your Paperclip subscription has been cancelled</h2>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+          Hi ${firstName} — your Pro subscription has ended and your instance has been stopped.
+        </p>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+          <strong>Your data is safe.</strong> We keep everything for 30 days — your companies, employees, and task history are all still there.
+          If you change your mind, resubscribe any time to pick up exactly where you left off.
+        </p>
+        <a href="${appUrl}/cases" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Resubscribe — $29/month
+        </a>
+        <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
+          Questions? Reply to this email or visit ${appUrl}
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendMonthlySummaryEmail(to: string, stats: {
+  name?: string;
+  actionsUsed: number;
+  actionsLimit: number;
+  tasksCompleted: number;
+  companies: string[];
+  month: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
+  const firstName = (stats.name ?? "there").split(" ")[0];
+  const companyList = stats.companies.length > 0
+    ? stats.companies.map(c => `<li style="color:#475569;font-size:14px;">${c}</li>`).join("")
+    : `<li style="color:#475569;font-size:14px;">No active companies this month</li>`;
+
+  return sendEmail({
+    to,
+    subject: `[Paperclip] Your ${stats.month} summary — ${stats.actionsUsed} actions used`,
+    body: `
+      <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 8px;">Your ${stats.month} summary</h2>
+        <p style="color: #475569; font-size: 14px; margin-bottom: 24px;">Hi ${firstName} — here's what your AI team did this month.</p>
+
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+            <span style="color: #64748B; font-size: 13px;">Actions used</span>
+            <span style="color: #0F172A; font-size: 13px; font-weight: 600;">${stats.actionsUsed} / ${stats.actionsLimit}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #64748B; font-size: 13px;">Tasks completed</span>
+            <span style="color: #0F172A; font-size: 13px; font-weight: 600;">${stats.tasksCompleted}</span>
+          </div>
+        </div>
+
+        <p style="color: #0F172A; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Active companies</p>
+        <ul style="margin: 0 0 24px; padding-left: 20px;">
+          ${companyList}
+        </ul>
+
+        <a href="${appUrl}/dashboard" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Go to dashboard
+        </a>
+        <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
+          Monthly summaries are sent on the 1st of each month.
         </p>
       </div>
     `,

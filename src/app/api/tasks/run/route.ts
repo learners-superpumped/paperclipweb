@@ -8,6 +8,9 @@ import { companies, tasks, users, creditTransactions } from "@/db/schema";
 import { sendEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
 
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
+
 const Body = z.object({
   companyId: z.string().uuid(),
   title: z.string().min(1).max(120),
@@ -24,7 +27,7 @@ async function callClaude({
   prompt: string;
   companyName: string;
   mission: string;
-}): Promise<string> {
+}): Promise<{ text: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheCreationTokens: number }> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -42,7 +45,13 @@ Format your response as a professional deliverable with a title, the work itself
   const response = await client.messages.create({
     model: "claude-opus-4-5",
     max_tokens: 1500,
-    system: systemPrompt,
+    system: [
+      {
+        type: "text" as const,
+        text: systemPrompt,
+        cache_control: { type: "ephemeral" as const },
+      },
+    ],
     messages: [
       {
         role: "user",
@@ -53,7 +62,22 @@ Format your response as a professional deliverable with a title, the work itself
 
   const text =
     response.content[0].type === "text" ? response.content[0].text : "";
-  return text;
+
+  const usageAny = response.usage as unknown as Record<string, number | undefined>;
+  const cacheReadTokens = usageAny?.cache_read_input_tokens;
+  const cacheCreationTokens = usageAny?.cache_creation_input_tokens;
+  const inputTokens = response.usage?.input_tokens ?? 0;
+  const outputTokens = response.usage?.output_tokens ?? 0;
+
+  console.log("[tasks/run] cache_stats", {
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    cache_read_input_tokens: cacheReadTokens ?? 0,
+    cache_creation_input_tokens: cacheCreationTokens ?? 0,
+    cache_hit: (cacheReadTokens ?? 0) > 0,
+  });
+
+  return { text, inputTokens, outputTokens, cacheReadTokens: cacheReadTokens ?? 0, cacheCreationTokens: cacheCreationTokens ?? 0 };
 }
 
 export async function POST(req: Request) {
@@ -93,7 +117,7 @@ export async function POST(req: Request) {
   }
 
   const template = company.caseId ? findCase(company.caseId) : undefined;
-  const result = await callClaude({
+  const { text: result, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens } = await callClaude({
     title: parsed.title,
     prompt: parsed.prompt,
     companyName: company.name,
@@ -140,9 +164,15 @@ export async function POST(req: Request) {
     companyId: company.id,
     amount: -1,
     type: "usage",
-    description: `task: ${parsed.title}`,
+    description: JSON.stringify({
+      task: parsed.title,
+      cache_read: cacheReadTokens,
+      cache_creation: cacheCreationTokens,
+    }),
     provider: "anthropic",
-    model: "claude-opus-4.7",
+    model: "claude-opus-4-5",
+    tokensInput: inputTokens,
+    tokensOutput: outputTokens,
   });
 
   // 결과 메일 (best-effort)

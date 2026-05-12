@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     customer_email: email,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/checkout/success?session_id={CHECKOUT_SESSION_ID}&caseId=${caseId ?? ""}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/pricing`,
+    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/checkout/cancel?reason=declined`,
     metadata: {
       userId: user.id,
       caseId: caseId ?? "",

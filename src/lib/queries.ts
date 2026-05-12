@@ -158,15 +158,19 @@ export async function addCreditTransaction(data: {
     })
     .where(eq(users.id, data.userId));
 
-  // Check if credits are low (< 10% of limit) and send warning email
+  // Send low-credit email alerts when crossing the 20 or 10 threshold
   if (data.amount < 0) {
     try {
       const updated = await getUserCredits(data.userId);
-      const threshold = Math.floor(updated.limit * 0.1);
-      if (updated.balance > 0 && updated.balance <= threshold) {
+      const previousBalance = updated.balance - data.amount; // data.amount is negative
+      if (updated.balance > 0) {
         const user = await getUserById(data.userId);
         if (user?.email) {
-          await sendCreditLowEmail(user.email, updated.balance, updated.limit);
+          if (updated.balance <= 20 && previousBalance > 20) {
+            await sendCreditLowEmail(user.email, updated.balance, updated.limit, 20);
+          } else if (updated.balance <= 10 && previousBalance > 10) {
+            await sendCreditLowEmail(user.email, updated.balance, updated.limit, 10);
+          }
         }
       }
     } catch (err) {

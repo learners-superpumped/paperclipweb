@@ -188,7 +188,7 @@ export function InstanceShell({
     }
   };
 
-  const lowBalance = credits.balance <= 10;
+  const lowBalance = credits.balance <= 20;
   const zeroBalance = credits.balance <= 0;
 
   return (

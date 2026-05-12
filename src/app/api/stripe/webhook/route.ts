@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
-import { users, subscriptions, invoices } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, subscriptions, invoices, companies } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
 import {
@@ -11,6 +11,7 @@ import {
   trackServerCreditsToppedUp,
   trackServerSubscriptionCanceled,
 } from "@/lib/analytics-server";
+import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
 import type Stripe from "stripe";
 
 // Plan prices for server-side event properties
@@ -216,6 +217,25 @@ export async function POST(req: Request) {
           .update(subscriptions)
           .set({ status: "canceled" })
           .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+
+        // Stop all running instances for this user
+        await db()
+          .update(companies)
+          .set({ status: "stopped", updatedAt: new Date() })
+          .where(and(eq(companies.userId, user.id), eq(companies.status, "running")));
+
+        // Also stop provisioning instances
+        await db()
+          .update(companies)
+          .set({ status: "stopped", updatedAt: new Date() })
+          .where(and(eq(companies.userId, user.id), eq(companies.status, "provisioning")));
+
+        // Send human-language cancellation email (best-effort)
+        try {
+          await sendSubscriptionCancelledEmail(user.email, user.name ?? undefined);
+        } catch (err) {
+          console.error("[Webhook] Failed to send cancellation email:", err);
+        }
 
         // Amplitude: subscription_cancel
         await trackServerSubscriptionCanceled(user.id, previousPlan);

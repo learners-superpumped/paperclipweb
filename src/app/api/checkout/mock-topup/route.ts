@@ -22,7 +22,6 @@ export async function POST() {
     .update(users)
     .set({
       creditsBalance: sql`${users.creditsBalance} + ${TOPUP.credits}`,
-      creditsLimit: sql`${users.creditsLimit} + ${TOPUP.credits}`,
     })
     .where(eq(users.id, user.id))
     .returning({

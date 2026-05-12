@@ -68,16 +68,22 @@ export default function CheckoutSuccessClient() {
             <p className="text-gray-600">
               Spinning up your real instance with 100 actions + Opus 4.7…
             </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div
+              className="flex items-center justify-center gap-2 text-sm text-gray-500"
+              data-testid="provisioning-indicator"
+            >
               <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
-              <span>Provisioning… ({elapsed}s)</span>
+              <span data-testid="provisioning-elapsed">Provisioning… ({elapsed}s)</span>
             </div>
           </>
         )}
 
         {status === "ready" && (
-          <p className="text-green-700 font-medium">
-            ✓ Ready. Taking you to your dashboard…
+          <p
+            className="text-green-700 font-medium"
+            data-testid="ready-notification"
+          >
+            ✓ Ready. Taking you to your instance…
           </p>
         )}
 
