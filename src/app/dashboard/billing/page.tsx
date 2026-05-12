@@ -43,8 +43,10 @@ export default async function BillingPage() {
           <Link href="/dashboard" className="text-sm font-semibold text-secondary-800">
             ← Dashboard
           </Link>
-          <div className="text-xs text-secondary-800">
-            Credits {user.creditsBalance} / {user.creditsLimit}
+          <div className="text-xs text-secondary-800" data-testid="credit-balance">
+            Credits{" "}
+            <span data-testid="credit-balance-value">{user.creditsBalance}</span>{" "}
+            / {user.creditsLimit}
           </div>
         </div>
       </header>

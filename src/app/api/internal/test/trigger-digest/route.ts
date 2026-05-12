@@ -7,9 +7,15 @@ import { sendMonthlySummaryEmail } from "@/lib/agentmail";
 
 export const dynamic = "force-dynamic";
 
-// QA endpoint: trigger monthly digest email for the currently authenticated user.
-// No CRON_SECRET required — authenticated via session.
-// Allows QA to verify 10.F7 (monthly summary email) without CRON_SECRET.
+// QA endpoint (10.F7): trigger monthly digest email for the currently authenticated user.
+// No CRON_SECRET required — authenticated via session cookie (same as all other QA steps).
+//
+// Usage:
+//   POST /api/internal/test/trigger-digest
+//   Cookie: next-auth.session-token=<session>   (set automatically if using browser/Playwright session)
+//
+// Returns: { ok: true, email, month, actionsUsed }
+// Then check AgentMail inbox for the monthly summary email to verify 10.F7.
 export async function POST() {
   const session = await auth();
   if (!session?.user?.email) {
