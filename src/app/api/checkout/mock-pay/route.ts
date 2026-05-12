@@ -113,41 +113,43 @@ export async function POST(req: Request) {
       .orderBy(desc(companies.createdAt))
       .limit(1);
     if (existing?.slug) {
-      if (mock) {
-        const nextEmployeesJson = employeesJson ? JSON.stringify(employeesJson) : existing.employeesJson;
-        await db()
-          .update(companies)
-          .set({
-            name: companyName,
-            caseId,
-            employeesJson: nextEmployeesJson,
-            status: "running",
-            mockMode: false,
-            updatedAt: new Date(),
-          })
-          .where(eq(companies.id, existing.id));
+      // Always update company with latest mock/template data regardless of mock presence
+      const nextEmployeesJson = employeesJson ? JSON.stringify(employeesJson) : null;
+      await db()
+        .update(companies)
+        .set({
+          name: companyName,
+          caseId,
+          status: "running",
+          mockMode: false,
+          updatedAt: new Date(),
+          ...(nextEmployeesJson ? { employeesJson: nextEmployeesJson } : {}),
+        })
+        .where(eq(companies.id, existing.id));
 
-        if (firstTask?.title && firstTaskResult) {
-          const [existingTask] = await db()
-            .select({ id: tasks.id })
-            .from(tasks)
-            .where(and(eq(tasks.companyId, existing.id), eq(tasks.title, firstTask.title)))
-            .limit(1);
-          if (!existingTask) {
-            await db().insert(tasks).values({
-              companyId: existing.id,
-              userId: user.id,
-              title: firstTask.title,
-              inputPrompt: firstTask.description ?? firstTask.title,
-              status: "done",
-              resultMarkdown: firstTaskResult,
-              creditsUsed: 0,
-              isMock: true,
-              finishedAt: new Date(),
-            });
-          }
+      // Ensure first task is present (from mock or template fallback)
+      if (firstTask?.title && firstTaskResult) {
+        const [existingTask] = await db()
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(and(eq(tasks.companyId, existing.id), eq(tasks.title, firstTask.title)))
+          .limit(1);
+        if (!existingTask) {
+          await db().insert(tasks).values({
+            companyId: existing.id,
+            userId: user.id,
+            title: firstTask.title,
+            inputPrompt: firstTask.description ?? firstTask.title,
+            status: "done",
+            resultMarkdown: firstTaskResult,
+            creditsUsed: 0,
+            isMock: true,
+            finishedAt: new Date(),
+          });
         }
+      }
 
+      if (mock) {
         await db()
           .update(mockCompanies)
           .set({ migratedToCompanyId: existing.id })

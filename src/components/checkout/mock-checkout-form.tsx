@@ -64,7 +64,7 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
         setLoading(false);
         return;
       }
-      router.push(`/i/${data.slug}?just_paid=1`);
+      router.push(`/checkout/success?session_id=mock&slug=${data.slug}`);
     } catch {
       setError("Payment failed. Please try again.");
       setLoading(false);

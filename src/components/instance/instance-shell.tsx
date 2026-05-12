@@ -89,7 +89,8 @@ export function InstanceShell({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!taskTitle.trim() || !taskPrompt.trim()) return;
+    if (!taskPrompt.trim()) return;
+    const effectiveTitle = taskTitle.trim() || taskPrompt.trim().slice(0, 80);
     setRunning(true);
     try {
       const res = await fetch("/api/tasks/run", {
@@ -97,7 +98,7 @@ export function InstanceShell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyId: company.id,
-          title: taskTitle.trim(),
+          title: effectiveTitle,
           prompt: taskPrompt.trim(),
         }),
       });
@@ -431,11 +432,10 @@ export function InstanceShell({
               </div>
             )}
             <Input
-              placeholder="e.g. 3 Instagram posts for our café this week"
+              placeholder="e.g. 3 Instagram posts for our café this week (optional — auto-filled from prompt)"
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
               data-testid="task-title"
-              required
             />
             <textarea
               placeholder="Describe the outcome you want (tone, keywords, length, audience…)"

@@ -8,6 +8,7 @@ export default function CheckoutSuccessClient() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const caseId = searchParams.get("caseId");
+  const slug = searchParams.get("slug");
   const [status, setStatus] = useState<"waiting" | "ready" | "timeout">("waiting");
   const [elapsed, setElapsed] = useState(0);
 
@@ -23,7 +24,11 @@ export default function CheckoutSuccessClient() {
           if (data?.plan && data.plan !== "free") {
             setStatus("ready");
             setTimeout(() => {
-              router.push(caseId ? `/dashboard?caseId=${caseId}` : "/dashboard");
+              if (slug) {
+                router.push(`/i/${slug}?just_paid=1`);
+              } else {
+                router.push(caseId ? `/dashboard?caseId=${caseId}` : "/dashboard");
+              }
             }, 1500);
             return true;
           }
