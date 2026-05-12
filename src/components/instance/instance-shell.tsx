@@ -8,6 +8,34 @@ import { Input } from "@/components/ui/input";
 import { TOPUP } from "@/lib/constants";
 import { Loader2, ArrowRight, Mail, Plus, Pencil, CreditCard, Check } from "lucide-react";
 
+const CASE_SUGGESTIONS: Record<string, Array<{ title: string; prompt: string }>> = {
+  "ai-insta-influencer": [
+    { title: "3 Instagram captions for this week", prompt: "Write 3 Instagram captions with hashtags for a lifestyle brand post about morning routines. Include a CTA in each." },
+    { title: "DM reply script for a brand collab inquiry", prompt: "Draft a professional but warm DM reply to a brand that reached out for collaboration. Ask for their rate card and offer a media kit." },
+    { title: "Content calendar for next 7 days", prompt: "Create a 7-day Instagram content calendar with post type (reel/carousel/story), topic, and best posting time for each day." },
+  ],
+  "ai-blog-seo": [
+    { title: "SEO article: Notion templates", prompt: "Write a 1,200-word SEO article targeting the keyword 'best Notion templates for productivity'. Include H2s, internal link placeholders, and a meta description." },
+    { title: "Keyword cluster for AI tools niche", prompt: "Generate a keyword cluster of 15 long-tail keywords for 'AI productivity tools'. Group by intent (informational/commercial/transactional) and estimated monthly volume tier." },
+    { title: "Affiliate product review outline", prompt: "Create an outline for a 2,000-word affiliate review of a project management tool. Include trust signals, pros/cons section, and CTA placement." },
+  ],
+  "ai-newsletter": [
+    { title: "Newsletter issue: AI automation week", prompt: "Write a 500-word newsletter issue about the top 3 AI automation news stories this week. Include a subject line, preview text, and one actionable tip for readers." },
+    { title: "Subject line A/B test: 5 options", prompt: "Generate 5 subject line variations for a newsletter about 'how founders are using AI to replace their first hire'. Mix curiosity, urgency, and specificity angles." },
+    { title: "Sponsor outreach email", prompt: "Write a cold outreach email to a SaaS company proposing a newsletter sponsorship. Include open rate stats placeholder, audience description, and pricing CTA." },
+  ],
+  "ai-shorts": [
+    { title: "3 short scripts for trending AI topics", prompt: "Write 3 short-form video scripts (60 seconds each) on trending AI topics. Each script needs a hook (first 3 seconds), main point, and CTA." },
+    { title: "Trend analysis: what to post this week", prompt: "Analyze current trending topics on YouTube Shorts and TikTok in the tech/AI space. Recommend 5 video concepts with title, hook, and format (talking head/screen record/animation)." },
+    { title: "Title + thumbnail text for 10 videos", prompt: "Generate titles and thumbnail text for 10 short videos about 'AI tools that save time'. Optimize for CTR with curiosity gaps and numbers." },
+  ],
+  "ai-cs-bot": [
+    { title: "Reply to a refund request email", prompt: "Draft a professional reply to a customer requesting a refund for a SaaS subscription. They're unhappy with the features. Offer alternatives before refunding, keep tone empathetic." },
+    { title: "FAQ document: top 10 support questions", prompt: "Create a FAQ document with answers for these 10 common SaaS support questions: billing, password reset, feature request, cancellation, data export, API limits, integrations, uptime, pricing, onboarding." },
+    { title: "Chat greeting + escalation script", prompt: "Write a chat widget greeting message and a 3-step escalation script for when a customer reports a critical bug. Keep it warm but efficient." },
+  ],
+};
+
 interface TaskRow {
   id: string;
   title: string;
@@ -204,6 +232,18 @@ export function InstanceShell({
         </div>
       )}
 
+      {!justPaid && taskRows.length > 0 && taskRows.every((t) => t.isMock) && (
+        <div
+          className="mx-auto max-w-3xl mt-6 rounded-xl bg-indigo-50 border border-indigo-200 px-5 py-4"
+          data-testid="onboarding-real-task-banner"
+        >
+          <p className="text-sm font-semibold text-indigo-900">Ready to run a real task</p>
+          <p className="mt-1 text-sm text-indigo-800">
+            The mock run showed you the format. Now type any task below — Claude Opus will actually do it for your company.
+          </p>
+        </div>
+      )}
+
       {lowBalance && !zeroBalance && (
         <div
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm"
@@ -373,6 +413,23 @@ export function InstanceShell({
             </span>
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
+            {company.caseId && CASE_SUGGESTIONS[company.caseId] && (
+              <div className="mb-3">
+                <p className="text-xs text-gray-600 mb-2">Suggested tasks:</p>
+                <div className="flex flex-wrap gap-2">
+                  {CASE_SUGGESTIONS[company.caseId].map((s) => (
+                    <button
+                      key={s.title}
+                      type="button"
+                      onClick={() => { setTaskTitle(s.title); setTaskPrompt(s.prompt); }}
+                      className="text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:border-gray-950 hover:text-gray-950 transition-colors"
+                    >
+                      {s.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <Input
               placeholder="e.g. 3 Instagram posts for our café this week"
               value={taskTitle}
