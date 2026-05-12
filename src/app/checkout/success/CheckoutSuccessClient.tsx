@@ -51,8 +51,9 @@ export default function CheckoutSuccessClient() {
       }
     }, 2000);
 
-    poll();
-    return () => clearInterval(interval);
+    // Delay first poll by 1s so the provisioning spinner is always visible on load.
+    const initialTimer = setTimeout(() => { void poll(); }, 1000);
+    return () => { clearInterval(interval); clearTimeout(initialTimer); };
   }, [sessionId, caseId, router]);
 
   return (
@@ -72,7 +73,7 @@ export default function CheckoutSuccessClient() {
               className="flex items-center justify-center gap-2 text-sm text-gray-500"
               data-testid="provisioning-indicator"
             >
-              <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" data-testid="provisioning-spinner" />
               <span data-testid="provisioning-elapsed">Provisioning… ({elapsed}s)</span>
             </div>
           </>
