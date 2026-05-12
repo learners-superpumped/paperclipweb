@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check, Mail, ArrowRight, Sparkles } from "lucide-react";
 import type { CaseTemplate } from "@/lib/cases";
@@ -25,6 +27,7 @@ export function MockOnboardingFlow({
 }) {
   const [stage, setStage] = useState<Stage>("creating_company");
   const [emailSent, setEmailSent] = useState(false);
+  const [taskResult, setTaskResult] = useState<string | null>(null);
   const firstName = userName.split(" ")[0];
 
   useEffect(() => {
@@ -41,16 +44,27 @@ export function MockOnboardingFlow({
       return () => clearTimeout(t);
     }
     if (stage === "running_task") {
-      // mock task 결과: 6초 후 완성 + 백그라운드로 결과 메일 발송
+      let cancelled = false;
       fetch("/api/onboarding/start-mock-task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caseId: template.id }),
       })
-        .then(() => setEmailSent(true))
-        .catch(() => setEmailSent(false));
-      const t = setTimeout(() => setStage("task_done"), 6000);
-      return () => clearTimeout(t);
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          if (data.result) setTaskResult(data.result);
+          setEmailSent(true);
+          setStage("task_done");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          // fallback to preset on error
+          setStage("task_done");
+        });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [stage, template.id]);
 
@@ -132,6 +146,7 @@ export function MockOnboardingFlow({
               stage={stage}
               emailSent={emailSent}
               userEmail={userEmail}
+              taskResult={taskResult}
               onRun={() => setStage("running_task")}
             />
           </StepCard>
@@ -243,12 +258,14 @@ function SampleTask({
   stage,
   emailSent,
   userEmail,
+  taskResult,
   onRun,
 }: {
   template: CaseTemplate;
   stage: Stage;
   emailSent: boolean;
   userEmail: string;
+  taskResult: string | null;
   onRun: () => void;
 }) {
   return (
@@ -276,13 +293,13 @@ function SampleTask({
           data-testid="task-running"
         >
           <Loader2 className="h-4 w-4 animate-spin" />
-          The team is on it… (usually 30–60s)
+          Claude is working on it… (30–60s)
         </div>
       )}
       {stage === "task_done" && (
         <div data-testid="task-result">
           <div className="rounded-lg bg-secondary-50 border border-secondary-100 p-4 text-sm text-secondary-700 whitespace-pre-wrap mb-3">
-            {template.sampleTask.presetResult}
+            {taskResult ?? template.sampleTask.presetResult}
           </div>
           <div className="flex items-center gap-2 text-xs text-secondary-700">
             <Mail className="h-3.5 w-3.5" />
@@ -314,12 +331,14 @@ function UpgradeHook({ template }: { template: CaseTemplate }) {
         Your {template.company} carries over as-is.
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link href={`/checkout?case=${template.id}`} data-testid="checkout-cta">
-          <Button size="lg" className="w-full sm:w-auto gap-2">
-            Start for $29
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
+        <a
+          href={`/checkout?case=${template.id}`}
+          data-testid="checkout-cta"
+          className={cn(buttonVariants({ size: "lg" }), "sm:w-auto gap-2 inline-flex items-center")}
+        >
+          Start for $29/month
+          <ArrowRight className="h-4 w-4" />
+        </a>
         <Link
           href="/cases"
           className="text-sm text-secondary-700 hover:text-secondary-800 flex items-center"

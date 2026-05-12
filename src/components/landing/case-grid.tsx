@@ -1,7 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import type { CaseTemplate } from "@/lib/cases";
 
 export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
@@ -52,10 +51,11 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                 </div>
               </div>
               <div className="mt-auto space-y-2">
-                <Link href={`/signup?case=${c.id}`} className="block">
-                  <Button size="sm" className="w-full">
-                    Clone this company
-                  </Button>
+                <Link
+                  href={`/signup?case=${c.id}`}
+                  className={cn(buttonVariants({ size: "sm" }), "block text-center")}
+                >
+                  Clone this company
                 </Link>
                 <div className="space-y-1 pt-2 border-t border-secondary-100">
                   <div className="text-[11px] text-secondary-700 mb-1">
