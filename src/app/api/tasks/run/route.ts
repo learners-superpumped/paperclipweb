@@ -155,7 +155,7 @@ Before returning your response, verify every item:
 
 
   const response = await client.messages.create({
-    model: "claude-opus-4-5",
+    model: "claude-opus-4-7",
     max_tokens: 1500,
     system: [
       {
@@ -175,11 +175,10 @@ Before returning your response, verify every item:
   const text =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  const usageAny = response.usage as unknown as Record<string, number | undefined>;
-  const cacheReadTokens = usageAny?.cache_read_input_tokens;
-  const cacheCreationTokens = usageAny?.cache_creation_input_tokens;
-  const inputTokens = response.usage?.input_tokens ?? 0;
-  const outputTokens = response.usage?.output_tokens ?? 0;
+  const cacheReadTokens = response.usage.cache_read_input_tokens ?? 0;
+  const cacheCreationTokens = response.usage.cache_creation_input_tokens ?? 0;
+  const inputTokens = response.usage.input_tokens ?? 0;
+  const outputTokens = response.usage.output_tokens ?? 0;
 
   console.log("[tasks/run] cache_stats", {
     input_tokens: inputTokens,
@@ -284,7 +283,7 @@ export async function POST(req: Request) {
       cache_creation: cacheCreationTokens,
     }),
     provider: "anthropic",
-    model: "claude-opus-4-5",
+    model: "claude-opus-4-7",
     tokensInput: inputTokens,
     tokensOutput: outputTokens,
   });
