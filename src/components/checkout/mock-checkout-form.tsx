@@ -111,7 +111,7 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
           </label>
           <Input
             id="expiry"
-            placeholder="12/30"
+            placeholder="MM/YY"
             value={expiry}
             onChange={(e) => setExpiry(e.target.value)}
             data-testid="card-expiry"
@@ -127,6 +127,7 @@ export function MockCheckoutForm({ caseId }: { caseId: string | null }) {
           </label>
           <Input
             id="cvc"
+            name="cvc"
             placeholder="123"
             value={cvc}
             onChange={(e) => setCvc(e.target.value)}

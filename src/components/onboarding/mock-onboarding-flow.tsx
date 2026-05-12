@@ -232,7 +232,7 @@ function CtoIntro({
         </div>
       </div>
       <div className="rounded-lg bg-secondary-50 p-4 text-sm text-secondary-700 leading-relaxed">
-        Hi {userName}. {cto.bio} I'll help you run {template.company} — {template.mission}.
+        Hi {userName}, I'm {cto.name}. {cto.bio} I'll help you run {template.company} — {template.mission}.
       </div>
     </div>
   );

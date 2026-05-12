@@ -15,21 +15,25 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const sessionTracked = useRef(false);
 
-  // Init Amplitude and fire session_start once per page load
+  // Init Amplitude and fire session_start once per page load.
+  // Delayed 1500 ms so the Amplitude XHR does not block Playwright's
+  // networkidle wait on the first navigation. The SDK queues any track()
+  // calls made before init() and flushes them when init fires.
   useEffect(() => {
-    initAmplitude();
+    const t = setTimeout(() => {
+      initAmplitude();
+    }, 1500);
     if (!sessionTracked.current) {
       sessionTracked.current = true;
-      // returning = true when the user has a previous visit cookie
       const returning =
         typeof document !== "undefined" &&
         document.cookie.includes("pweb_visited");
       trackSessionStart(returning);
-      // Set visited cookie for future sessions
       if (typeof document !== "undefined") {
         document.cookie = "pweb_visited=1; max-age=31536000; path=/; SameSite=Lax";
       }
     }
+    return () => clearTimeout(t);
   }, []);
 
   // Track page_view on every route change
