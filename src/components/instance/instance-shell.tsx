@@ -361,9 +361,17 @@ export function InstanceShell({
           className="rounded-2xl border border-secondary-200 bg-white p-6"
           data-testid="task-runner"
         >
-          <h2 className="text-lg font-semibold text-secondary-800 mb-3">
-            Run a new task
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-secondary-800">
+              Run a new task
+            </h2>
+            <span
+              className="rounded-full bg-accent-50 px-3 py-1 text-[11px] font-medium text-accent"
+              data-testid="engine-badge"
+            >
+              Powered by Claude Opus 4.7
+            </span>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               placeholder="e.g. 3 Instagram posts for our café this week"
