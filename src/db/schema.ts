@@ -130,6 +130,8 @@ export const tasks = paperclipwebSchema.table("tasks", {
   resultMarkdown: text("result_markdown"),
   creditsUsed: integer("credits_used").notNull().default(0),
   isMock: boolean("is_mock").notNull().default(true), // mock 데이터 (결제 전) vs Opus 호출 (결제 후)
+  cacheReadTokens: integer("cache_read_tokens"),
+  cacheCreationTokens: integer("cache_creation_tokens"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 }, (table) => [

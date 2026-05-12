@@ -247,6 +247,8 @@ export async function POST(req: Request) {
       resultMarkdown: result,
       creditsUsed: 1,
       isMock: false,
+      cacheReadTokens: cacheReadTokens > 0 ? cacheReadTokens : null,
+      cacheCreationTokens: cacheCreationTokens > 0 ? cacheCreationTokens : null,
       finishedAt: new Date(),
     })
     .returning();

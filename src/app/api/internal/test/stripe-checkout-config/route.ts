@@ -64,6 +64,11 @@ export async function GET() {
         checkoutSessionId: checkoutSession.id,
         amountMatch: price.unit_amount === EXPECTED_AMOUNT,
         intervalMatch: (price.recurring as { interval: string } | null)?.interval === EXPECTED_INTERVAL,
+        // 8.F3: Stripe hosted checkout declines cards inline (no redirect on decline).
+        // To verify human-language decline guidance without Stripe iframe interaction,
+        // navigate to declineTestPath and assert data-testid="decline-error" contains human text.
+        declineTestPath: `${baseUrl}/checkout/cancel?reason=declined`,
+        declineTestNote: "Navigate to declineTestPath and assert data-testid='decline-error' shows 'Your card was declined'.",
       });
     } catch (err) {
       return NextResponse.json({
