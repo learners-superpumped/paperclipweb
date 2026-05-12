@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     metadata: {
       userId: user.id,
       caseId: caseId ?? "",
+      plan: "starter",
     },
   });
 
