@@ -110,7 +110,8 @@ export async function POST(req: Request) {
     })
     .returning();
 
-  // Result mail (best-effort)
+  // Result mail (best-effort) — track success for client
+  let emailSent = false;
   try {
     await sendEmail({
       to: email,
@@ -129,9 +130,10 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+    emailSent = true;
   } catch (err) {
     console.error("[onboarding] result mail failed", err);
   }
 
-  return NextResponse.json({ ok: true, mockId: mock.id, result: taskResult });
+  return NextResponse.json({ ok: true, mockId: mock.id, result: taskResult, emailSent });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export function MockOnboardingFlow({
   const [emailSent, setEmailSent] = useState(false);
   const [taskResult, setTaskResult] = useState<string | null>(null);
   const firstName = userName.split(" ")[0];
+  const upgradeHookRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (stage === "creating_company") {
@@ -51,20 +52,25 @@ export function MockOnboardingFlow({
         body: JSON.stringify({ caseId: template.id }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then((data: { result?: string; emailSent?: boolean }) => {
           if (cancelled) return;
           if (data.result) setTaskResult(data.result);
-          setEmailSent(true);
+          setEmailSent(data.emailSent === true);
           setStage("task_done");
         })
         .catch(() => {
           if (cancelled) return;
-          // fallback to preset on error
           setStage("task_done");
         });
       return () => {
         cancelled = true;
       };
+    }
+    if (stage === "task_done") {
+      const t = setTimeout(() => {
+        upgradeHookRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 400);
+      return () => clearTimeout(t);
     }
   }, [stage, template.id]);
 
@@ -152,7 +158,11 @@ export function MockOnboardingFlow({
           </StepCard>
         )}
 
-        {stage === "task_done" && <UpgradeHook template={template} />}
+        {stage === "task_done" && (
+          <div ref={upgradeHookRef}>
+            <UpgradeHook template={template} />
+          </div>
+        )}
       </div>
     </div>
   );

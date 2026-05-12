@@ -40,17 +40,30 @@ export default async function DashboardPage() {
             <div className="text-secondary-800 font-medium" data-testid="credits-balance">
               Credits {user.creditsBalance} / {user.creditsLimit}
             </div>
-            <Link href="/dashboard/billing" className="text-primary hover:underline">
-              Billing
+            <Link
+              href="/dashboard/billing"
+              className="text-primary hover:underline"
+              data-testid="billing-link"
+            >
+              Billing & top up
             </Link>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
-        <h1 className="text-2xl font-bold text-secondary-800">
-          {firstName}'s companies
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-secondary-800">
+            {firstName}'s companies
+          </h1>
+          <Link
+            href="/cases"
+            data-testid="new-company-btn"
+            className={`text-sm font-medium text-primary hover:underline`}
+          >
+            + New company
+          </Link>
+        </div>
 
         {!isPaid && (
           <div
