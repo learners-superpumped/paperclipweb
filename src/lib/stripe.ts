@@ -4,9 +4,16 @@ let _stripe: Stripe | null = null;
 
 export function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const isTest = process.env.STRIPE_TEST_MODE === "true";
+    const key = isTest
+      ? process.env.STRIPE_SECRET_KEY_TEST
+      : process.env.STRIPE_SECRET_KEY;
     if (!key) {
-      throw new Error("STRIPE_SECRET_KEY is not set");
+      throw new Error(
+        isTest
+          ? "STRIPE_SECRET_KEY_TEST is not set (STRIPE_TEST_MODE=true)"
+          : "STRIPE_SECRET_KEY is not set"
+      );
     }
     _stripe = new Stripe(key, {
       apiVersion: "2026-03-25.dahlia",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
+import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { companies, tasks, users, creditTransactions } from "@/db/schema";
@@ -13,7 +14,7 @@ const Body = z.object({
   prompt: z.string().min(1).max(4000),
 });
 
-function buildOpusResult({
+async function callClaude({
   title,
   prompt,
   companyName,
@@ -23,40 +24,36 @@ function buildOpusResult({
   prompt: string;
   companyName: string;
   mission: string;
-}): string {
-  const brief = prompt.trim().replace(/\s+/g, " ").slice(0, 360);
-  return `# ${title}
+}): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-Produced by ${companyName}'s Claude Opus 4.7 team.
+  const client = new Anthropic({ apiKey });
 
-## Working brief
-${brief}
+  const systemPrompt = `You are the AI team of ${companyName}. Company mission: ${mission}.
 
-## Strategy
-This task supports the company mission: ${mission}. The output is written to be usable immediately, with a clear angle, concrete copy, and next actions instead of a demo placeholder.
+You produce high-quality, immediately usable outputs. Every deliverable is:
+- Specific and concrete (no generic filler)
+- Ready to use without editing
+- Tied to a measurable next action (reply, click, save, book, or buy)
 
-## Deliverable
-1. Lead with a specific promise the audience can recognize in one glance.
-2. Use three variations so the team can test tone without starting from scratch.
-3. Keep every piece tied to a measurable next step: reply, click, save, book, or buy.
+Format your response as a professional deliverable with a title, the work itself (3 variations when relevant), and one clear next step.`;
 
-### Draft 1
-Hook: A practical result people want this week.
-Body: Show the before state, name the useful change, then give one simple action.
-CTA: "Reply with the word START and we'll send the checklist."
+  const response = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 1500,
+    system: systemPrompt,
+    messages: [
+      {
+        role: "user",
+        content: `Task: ${title}\n\n${prompt}`,
+      },
+    ],
+  });
 
-### Draft 2
-Hook: A behind-the-scenes detail that makes the business feel real.
-Body: Explain the small process choice that creates the better result.
-CTA: "Save this before your next planning session."
-
-### Draft 3
-Hook: A customer objection turned into proof.
-Body: Answer the hesitation directly, then show the faster path.
-CTA: "Want the version for your business? Send us your niche."
-
-## Next move
-Run one follow-up task asking the team to adapt the strongest draft for your exact channel, audience, and offer.`;
+  const text =
+    response.content[0].type === "text" ? response.content[0].text : "";
+  return text;
 }
 
 export async function POST(req: Request) {
@@ -96,7 +93,7 @@ export async function POST(req: Request) {
   }
 
   const template = company.caseId ? findCase(company.caseId) : undefined;
-  const result = buildOpusResult({
+  const result = await callClaude({
     title: parsed.title,
     prompt: parsed.prompt,
     companyName: company.name,
