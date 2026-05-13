@@ -155,6 +155,13 @@ export async function POST(req: Request) {
           .set({ migratedToCompanyId: existing.id })
           .where(eq(mockCompanies.id, mock.id));
       }
+      // Ensure stripeCustomerId is set on idempotent path too (8.M2).
+      if (!user.stripeCustomerId) {
+        await db()
+          .update(users)
+          .set({ stripeCustomerId: `cus_mock_${existing.id.slice(0, 8)}` })
+          .where(eq(users.id, user.id));
+      }
       return NextResponse.json({ ok: true, slug: existing.slug, idempotent: true });
     }
   }
@@ -192,6 +199,9 @@ export async function POST(req: Request) {
       plan: "pro",
       creditsBalance: PLANS.pro.credits,
       creditsLimit: PLANS.pro.credits,
+      // Set a mock Stripe customer ID so QA can confirm post-payment state (8.M2).
+      // Only set if not already present (preserve real IDs from test-mode flows).
+      ...(user.stripeCustomerId ? {} : { stripeCustomerId: `cus_mock_${company.id.slice(0, 8)}` }),
     })
     .where(eq(users.id, user.id));
 

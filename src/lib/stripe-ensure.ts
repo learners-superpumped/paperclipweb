@@ -10,10 +10,10 @@ export async function ensurePrice(opts: {
   unitAmount: number; // cents
   currency?: string;
   productName: string;
-  interval?: "month" | "year";
+  interval?: "month" | "year" | undefined; // undefined = one-time payment
 }): Promise<string> {
   const stripe = getStripe();
-  const { lookupKey, unitAmount, currency = "usd", productName, interval = "month" } = opts;
+  const { lookupKey, unitAmount, currency = "usd", productName, interval } = opts;
 
   // 1. lookup_key로 기존 price 조회
   const existing = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
@@ -27,7 +27,8 @@ export async function ensurePrice(opts: {
     product: product.id,
     unit_amount: unitAmount,
     currency,
-    recurring: { interval },
+    // interval undefined = one-time payment (no recurring field)
+    ...(interval ? { recurring: { interval } } : {}),
     lookup_key: lookupKey,
   });
 
