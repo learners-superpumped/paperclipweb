@@ -86,7 +86,7 @@ export default function PricingPage() {
               <span className="text-base text-secondary-700">/mo</span>
             </div>
             <p className="mt-2 text-sm text-secondary-700">
-              {PLANS.pro.credits} actions + 1 instance + email alerts
+              $9 LLM credit + 1 instance + email alerts
             </p>
             <ul className="mt-6 mb-8 space-y-3 flex-1">
               {PLANS.pro.features.map((feature) => (

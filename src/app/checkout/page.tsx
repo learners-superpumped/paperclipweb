@@ -42,7 +42,7 @@ export default async function CheckoutPage({
                 Pro subscription (billed monthly)
               </div>
               <div className="text-xs text-secondary-700">
-                {PLANS.pro.credits} actions + 1 instance + email alerts
+                $9 LLM credit + 1 instance + email alerts
               </div>
             </div>
             <div className="text-2xl font-bold text-secondary-800">
@@ -59,7 +59,7 @@ export default async function CheckoutPage({
             </div>
           )}
           <div className="mt-3 text-xs text-secondary-700">
-            Need more actions? Top up later from the dashboard — ${TOPUP.price} for {TOPUP.credits} actions.
+            Need more LLM credit? Top up later from your account — ${TOPUP.price} for $4.50 LLM credit.
           </div>
         </div>
 

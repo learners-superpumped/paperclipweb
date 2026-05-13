@@ -673,7 +673,7 @@ export async function checkPaperclipHealth(): Promise<{
   }
 
   try {
-    const res = await paperclipFetch("/api/companies", {
+    const res = await paperclipFetch("/api/health/", {
       method: "GET",
     });
 

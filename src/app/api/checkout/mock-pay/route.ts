@@ -254,7 +254,7 @@ export async function POST(req: Request) {
     companyId: company.id,
     amount: PLANS.pro.credits,
     type: "subscription",
-    description: "Pro subscription (mock) — 100 actions credited",
+    description: "Pro subscription (mock) — $9 LLM credit",
   });
 
   if (firstTask?.title && firstTaskResult) {
@@ -288,7 +288,7 @@ export async function POST(req: Request) {
         <div style="max-width:560px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:32px 24px;">
           <h2 style="color:#0F172A;font-size:22px;">Hi ${firstName} — ${companyName} is live</h2>
           <p style="color:#475569;font-size:14px;line-height:1.6;">Payment went through and your instance is up. Everything you built in the mock (company, team, first task) carried over as-is.</p>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">100 actions are credited. When you need more, top up $10 for 50 actions from the dashboard.</p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">$9 LLM credit is available. Need more? Top up $10 for $4.50 LLM credit from your account.</p>
           <a href="https://usepaperclip.app/i/${slug}" style="display:inline-block;background:#4F46E5;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">Open my company</a>
         </div>
       `,

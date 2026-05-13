@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { db } from "@/db";
 import { users, subscriptions, companies, stripeEvents, balances, balanceMovements } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   isPaperclipConfigured,
   importPaperclipCompany,
@@ -11,6 +11,7 @@ import {
   resumeAgent,
   pollForFirstWorkProduct,
   createCompanyInvite,
+  unarchivePaperclipCompany,
 } from "@/lib/paperclip";
 import { sendCompanyReadyEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
@@ -175,6 +176,50 @@ export async function GET(req: NextRequest) {
           }
         }
 
+        // 30-day re-subscribe: restore archived company instead of creating new
+        const now = new Date();
+        const archivedCompany = existingCompanies.find(
+          (c) => c.status === "archived" && c.paperclipCompanyId && c.deleteAfter && c.deleteAfter > now
+        );
+        if (archivedCompany?.paperclipCompanyId) {
+          send({ step: "import", label: "Restoring your company…" });
+          await unarchivePaperclipCompany(archivedCompany.paperclipCompanyId).catch(() => {});
+
+          // Reset balance to $9
+          await db()
+            .update(balances)
+            .set({ dollars: "9.0000", updatedAt: now })
+            .where(eq(balances.userId, userId));
+          await db().insert(balanceMovements).values({
+            userId,
+            kind: "grant",
+            dollarsDelta: "9.0000",
+            reference: sessionId,
+          });
+
+          await db()
+            .update(companies)
+            .set({ status: "running", archivedAt: null, deleteAfter: null, updatedAt: now })
+            .where(eq(companies.id, archivedCompany.id));
+
+          send({ step: "approve", label: "Approving CEO and team…" });
+          send({ step: "heartbeat", label: "Firing first heartbeat…" });
+          send({ step: "invite", label: "Sending you the keys…" });
+
+          const restoredInvite = await createCompanyInvite(archivedCompany.paperclipCompanyId, "owner");
+          const restoredUrl = restoredInvite?.url ?? `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/account`;
+
+          if (restoredInvite?.url) {
+            try {
+              await sendCompanyReadyEmail(email, restoredInvite.url, archivedCompany.name ?? "Your AI Company");
+            } catch { /* Non-fatal */ }
+          }
+
+          send({ done: true, url: restoredUrl });
+          controller.close();
+          return;
+        }
+
         // Step 1: Import company template
         send({ step: "import", label: "Importing company template…" });
 
@@ -220,9 +265,10 @@ export async function GET(req: NextRequest) {
           ? `learners-superpumped/paperclip-templates/${resolvedCaseId}`
           : "";
 
+        const templateRef = process.env.PAPERCLIP_TEMPLATE_REF ?? "main";
         const pcCompany = templateSource
-          ? await importPaperclipCompany(templateSource, "main", companyName)
-          : await importPaperclipCompany("", "main", companyName);
+          ? await importPaperclipCompany(templateSource, templateRef, companyName)
+          : await importPaperclipCompany("", templateRef, companyName);
 
         if (pcCompany?.id) {
           paperclipCompanyId = pcCompany.id;

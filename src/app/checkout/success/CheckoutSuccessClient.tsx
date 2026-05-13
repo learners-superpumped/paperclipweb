@@ -67,7 +67,7 @@ export default function CheckoutSuccessClient() {
         {status === "waiting" && (
           <>
             <p className="text-gray-600">
-              Spinning up your real instance with 100 actions + Opus 4.7…
+              Spinning up your real instance — $9 LLM credit included…
             </p>
             <div
               className="flex items-center justify-center gap-2 text-sm text-gray-500"

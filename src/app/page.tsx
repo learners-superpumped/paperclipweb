@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/landing/navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
+import { SocialProof } from "@/components/landing/social-proof";
 import { CaseGrid } from "@/components/landing/case-grid";
 import { Footer } from "@/components/landing/footer";
 import { CASES } from "@/lib/cases";
@@ -30,6 +31,7 @@ export default function LandingPage() {
       />
       <Navbar />
       <LandingHero />
+      <SocialProof />
       <CaseGrid cases={CASES} />
       <Footer />
     </div>

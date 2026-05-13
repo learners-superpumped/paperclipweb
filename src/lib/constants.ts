@@ -1,5 +1,5 @@
-// paperclip pricing — spec.md ## 6 pricing SoT.
-// Single subscription (Pro $29 / mo, 100 actions, 1 instance) + single topup ($10 / 50 actions).
+// paperclip pricing — spec.md ## 7 pricing SoT.
+// Pro $29/mo = $9 LLM credit + 1 instance. Top-up $10 = $4.50 LLM credit.
 
 export const PLANS = {
   free: {
@@ -27,7 +27,7 @@ export const PLANS = {
     companies: 1,
     features: [
       "1 paperclip instance",
-      "100 AI actions/month (Claude Opus 4.7)",
+      "$9 LLM credit/month (Claude Opus 4.7)",
       "Email balance + alert automation",
       "User subdomain (<slug>.usepaperclip.app)",
     ] as readonly string[],
@@ -40,7 +40,7 @@ export const TOPUP = {
   name: "Top up",
   credits: 50,
   price: 10,
-  description: "$10 = 50 actions, applied instantly.",
+  description: "$10 = $4.50 LLM credit, applied instantly.",
 } as const;
 
 // Backward-compat for older billing UI still importing TOPUP_PACKAGES.
