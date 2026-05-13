@@ -9,17 +9,12 @@ import {
   mockCompanies,
   subscriptions,
   creditTransactions,
-  tasks,
+  balances,
+  balanceMovements,
 } from "@/db/schema";
 import { findCase } from "@/lib/cases";
 import { sendEmail } from "@/lib/agentmail";
 import { PLANS } from "@/lib/constants";
-import {
-  isPaperclipConfigured,
-  createPaperclipCompany,
-  createCompanyInvite,
-  registerGstackSkills,
-} from "@/lib/paperclip";
 
 const Body = z.object({ caseId: z.string().nullable().optional() });
 
@@ -96,16 +91,8 @@ export async function POST(req: Request) {
   const caseId = mock?.caseId ?? parsed.caseId ?? "ai-blog-seo";
   const template = findCase(caseId);
   const companyName = mock?.companyName ?? template?.company ?? "AI Company";
-  const mockPayload = parseMockPayload(mock?.payloadJson ?? null);
-  const employeesJson =
-    mockPayload
-      ? mockPayload.employees ?? null
-      : template?.employees ?? null;
-  const firstTask = mockPayload?.sampleTask ?? template?.sampleTask;
-  const firstTaskResult =
-    mock?.firstTaskResult ?? firstTask?.presetResult ?? template?.sampleTask.presetResult;
 
-  // idempotency — 이미 active subscription + company 있으면 그 slug 반환 (재요청 시 중복 spawn 회피).
+  // Idempotency — 이미 active subscription + company 있으면 그 slug 반환.
   const [activeSub] = await db()
     .select()
     .from(subscriptions)
@@ -119,97 +106,16 @@ export async function POST(req: Request) {
       .orderBy(desc(companies.createdAt))
       .limit(1);
     if (existing?.slug) {
-      // Always update company with latest mock/template data regardless of mock presence
-      const nextEmployeesJson = employeesJson ? JSON.stringify(employeesJson) : null;
-
-      // spec 13/14: paperclipCompanyId 가 아직 null 이면 paperclip engine 에 진짜 company + invite 생성.
-      // (idempotent 재호출 시에도 진짜 인스턴스 누락된 옛 row 회복)
-      let nextPaperclipCompanyId: string | null = existing.paperclipCompanyId;
-      let nextInstanceUrl: string | null = existing.instanceUrl;
-      if (!existing.paperclipCompanyId && isPaperclipConfigured()) {
-        const pcCompany = await createPaperclipCompany(
-          companyName,
-          `paperclipweb subscriber instance for ${user.email ?? user.id}`,
-        );
-        if (pcCompany?.id) {
-          nextPaperclipCompanyId = pcCompany.id;
-          const invite = await createCompanyInvite(pcCompany.id, "owner");
-          nextInstanceUrl = invite?.url ?? nextInstanceUrl;
-          await registerGstackSkills(pcCompany.id);
-        }
-      }
-
+      // Ensure balances row exists (idempotent).
       await db()
-        .update(companies)
-        .set({
-          name: companyName,
-          caseId,
-          status: "running",
-          mockMode: false,
-          updatedAt: new Date(),
-          ...(nextEmployeesJson ? { employeesJson: nextEmployeesJson } : {}),
-          ...(nextPaperclipCompanyId ? { paperclipCompanyId: nextPaperclipCompanyId } : {}),
-          ...(nextInstanceUrl ? { instanceUrl: nextInstanceUrl } : {}),
-        })
-        .where(eq(companies.id, existing.id));
-
-      // Ensure first task is present (from mock or template fallback)
-      if (firstTask?.title && firstTaskResult) {
-        const [existingTask] = await db()
-          .select({ id: tasks.id })
-          .from(tasks)
-          .where(and(eq(tasks.companyId, existing.id), eq(tasks.title, firstTask.title)))
-          .limit(1);
-        if (!existingTask) {
-          await db().insert(tasks).values({
-            companyId: existing.id,
-            userId: user.id,
-            title: firstTask.title,
-            inputPrompt: firstTask.description ?? firstTask.title,
-            status: "done",
-            resultMarkdown: firstTaskResult,
-            creditsUsed: 0,
-            isMock: true,
-            finishedAt: new Date(),
-          });
-        }
-      }
-
-      if (mock) {
-        await db()
-          .update(mockCompanies)
-          .set({ migratedToCompanyId: existing.id })
-          .where(eq(mockCompanies.id, mock.id));
-      }
-      // Ensure stripeCustomerId is set on idempotent path too (8.M2).
-      if (!user.stripeCustomerId) {
-        await db()
-          .update(users)
-          .set({ stripeCustomerId: `cus_mock_${existing.id.slice(0, 8)}` })
-          .where(eq(users.id, user.id));
-      }
+        .insert(balances)
+        .values({ userId: user.id, dollars: "9.0000" })
+        .onConflictDoNothing();
       return NextResponse.json({ ok: true, slug: existing.slug, idempotent: true });
     }
   }
 
   const slug = makeSlug(companyName);
-
-  // spec 13/14: 결제 성공 시 paperclip engine 에 진짜 company 생성 + SSO invite 발급.
-  // 그래야 사용자가 자기 paperclip UI 전체를 그대로 사용 가능. instanceUrl 은 invite URL.
-  let paperclipCompanyId: string | null = null;
-  let instanceUrl: string = `/i/${slug}`;
-  if (isPaperclipConfigured()) {
-    const pcCompany = await createPaperclipCompany(
-      companyName,
-      `paperclipweb subscriber instance for ${user.email ?? user.id}`,
-    );
-    if (pcCompany?.id) {
-      paperclipCompanyId = pcCompany.id;
-      const invite = await createCompanyInvite(pcCompany.id, "owner");
-      if (invite?.url) instanceUrl = invite.url;
-      await registerGstackSkills(pcCompany.id);
-    }
-  }
 
   const [company] = await db()
     .insert(companies)
@@ -218,11 +124,12 @@ export async function POST(req: Request) {
       name: companyName,
       slug,
       caseId,
-      employeesJson: employeesJson ? JSON.stringify(employeesJson) : null,
-      status: "running",
+      // Provisioning is handled by /api/provisioning/stream (mock session).
+      // paperclipCompanyId and real instanceUrl are filled in there.
+      status: "provisioning",
       mockMode: false,
-      paperclipCompanyId,
-      instanceUrl,
+      paperclipCompanyId: null,
+      instanceUrl: `/i/${slug}`,
     })
     .returning();
 
@@ -237,14 +144,25 @@ export async function POST(req: Request) {
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
+  // Grant $9 LLM credit balance — architecture § 2 step 1.
+  await db()
+    .insert(balances)
+    .values({ userId: user.id, dollars: "9.0000" })
+    .onConflictDoNothing();
+
+  await db().insert(balanceMovements).values({
+    userId: user.id,
+    kind: "grant",
+    dollarsDelta: "9.0000",
+    reference: `mock_pay_${company.id}`,
+  });
+
   await db()
     .update(users)
     .set({
       plan: "pro",
       creditsBalance: PLANS.pro.credits,
       creditsLimit: PLANS.pro.credits,
-      // Set a mock Stripe customer ID so QA can confirm post-payment state (8.M2).
-      // Only set if not already present (preserve real IDs from test-mode flows).
       ...(user.stripeCustomerId ? {} : { stripeCustomerId: `cus_mock_${company.id.slice(0, 8)}` }),
     })
     .where(eq(users.id, user.id));
@@ -257,20 +175,6 @@ export async function POST(req: Request) {
     description: "Pro subscription (mock) — $9 LLM credit",
   });
 
-  if (firstTask?.title && firstTaskResult) {
-    await db().insert(tasks).values({
-      companyId: company.id,
-      userId: user.id,
-      title: firstTask.title,
-      inputPrompt: firstTask.description ?? firstTask.title,
-      status: "done",
-      resultMarkdown: firstTaskResult,
-      creditsUsed: 0,
-      isMock: true,
-      finishedAt: new Date(),
-    });
-  }
-
   if (mock) {
     await db()
       .update(mockCompanies)
@@ -278,23 +182,23 @@ export async function POST(req: Request) {
       .where(eq(mockCompanies.id, mock.id));
   }
 
-  // Welcome mail (best-effort)
+  // Payment-received email (no company URL — provisioning/stream sends company-ready email
+  // with the real paperclip invite URL once provisioning completes).
   const firstName = (user.name ?? "friend").split(" ")[0];
   try {
     await sendEmail({
       to: email,
-      subject: `[Paperclip] ${companyName} instance is ready`,
+      subject: `[Paperclip] Payment received — setting up ${companyName}`,
       body: `
         <div style="max-width:560px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:32px 24px;">
-          <h2 style="color:#0F172A;font-size:22px;">Hi ${firstName} — ${companyName} is live</h2>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">Payment went through and your instance is up. Everything you built in the mock (company, team, first task) carried over as-is.</p>
-          <p style="color:#475569;font-size:14px;line-height:1.6;">$9 LLM credit is available. Need more? Top up $10 for $4.50 LLM credit from your account.</p>
-          <a href="https://usepaperclip.app/i/${slug}" style="display:inline-block;background:#4F46E5;color:white;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">Open my company</a>
+          <h2 style="color:#0F172A;font-size:22px;">Hi ${firstName} — payment received</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">We're setting up your ${companyName} instance now. You'll get another email with the link to your company once it's ready — usually under a minute.</p>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">$9 LLM credit is included. Need more? Top up $10 for $4.50 additional credit from your account.</p>
         </div>
       `,
     });
   } catch (err) {
-    console.error("[checkout] welcome mail failed", err);
+    console.error("[checkout] payment-received mail failed", err);
   }
 
   return NextResponse.json({ ok: true, slug });

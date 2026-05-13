@@ -58,11 +58,11 @@ export function SocialProof({
           <div className="flex flex-col items-center text-center p-6 rounded-xl border border-secondary-200 bg-white">
             <div className="flex items-center gap-2 mb-2">
               <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-              <span className="text-3xl font-bold text-secondary-800">
-                {stars > 0 ? stars.toLocaleString() : "--"}
+              <span className="text-3xl font-bold text-secondary-800" data-testid="github-stars">
+                {stars > 0 ? `${Math.floor(stars / 1000)}K stars` : "60K+ stars"}
               </span>
             </div>
-            <p className="text-sm text-secondary-500">GitHub Stars</p>
+            <p className="text-sm text-secondary-500">open-source GitHub · 60K+ community</p>
             {growth > 0 && (
               <div className="flex items-center gap-1 mt-2 text-xs text-accent-700">
                 <TrendingUp className="h-3 w-3" />

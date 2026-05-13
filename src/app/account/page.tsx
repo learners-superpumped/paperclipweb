@@ -61,7 +61,7 @@ export default async function AccountPage() {
 
           <AccountActions
             instanceUrl={company?.instanceUrl ?? null}
-            hasActiveCompany={!!company?.paperclipCompanyId && company.status === "running"}
+            hasActiveCompany={company?.status === "running"}
           />
         </div>
       </div>

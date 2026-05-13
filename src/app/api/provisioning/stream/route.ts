@@ -48,6 +48,122 @@ export async function GET(req: NextRequest) {
           return;
         }
 
+        // ── Mock payment session (PAPERCLIP_PAYMENT_MOCK=true) ──────────────────
+        if (sessionId.startsWith("mock_") && process.env.PAPERCLIP_PAYMENT_MOCK === "true") {
+          const slug = sessionId.slice(5);
+
+          const [mockCompanyRow] = await db()
+            .select()
+            .from(companies)
+            .where(eq(companies.slug, slug))
+            .limit(1);
+
+          if (!mockCompanyRow) {
+            send({ error: "Company not found. Please try again." });
+            controller.close();
+            return;
+          }
+
+          const userId = mockCompanyRow.userId;
+          const [userRow] = await db()
+            .select({ email: users.email })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+          const userEmail = userRow?.email ?? "";
+
+          // Ensure balance exists (mock-pay should have created it; this is idempotent safety).
+          await db()
+            .insert(balances)
+            .values({ userId, dollars: "9.0000" })
+            .onConflictDoNothing();
+
+          const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+
+          // Already provisioned — fast-confirm all 4 steps then redirect.
+          if (mockCompanyRow.paperclipCompanyId) {
+            send({ step: "import", label: "Importing company template…" });
+            send({ step: "approve", label: "Approving CEO and team…" });
+            send({ step: "heartbeat", label: "Firing first heartbeat…" });
+            send({ step: "invite", label: "Sending you the keys…" });
+            const redirectUrl = mockCompanyRow.instanceUrl?.startsWith("http")
+              ? mockCompanyRow.instanceUrl
+              : `${BASE_URL}/account`;
+            send({ done: true, url: redirectUrl });
+            controller.close();
+            return;
+          }
+
+          // Full provisioning for mock session.
+          let companyName = mockCompanyRow.name ?? "My AI Company";
+          const resolvedCaseId = mockCompanyRow.caseId ?? caseId ?? "";
+          let paperclipCompanyId: string | undefined;
+          let instanceUrl: string | undefined;
+
+          send({ step: "import", label: "Importing company template…" });
+
+          if (isPaperclipConfigured() && resolvedCaseId) {
+            const templateSource = `learners-superpumped/paperclip-templates/${resolvedCaseId}`;
+            const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
+            if (!rawTemplateRef) {
+              console.error("[Provisioning/mock] PAPERCLIP_TEMPLATE_REF not set — falling back to 'main'.");
+            } else if (!/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
+              console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef}' is not a 40-char SHA.`);
+            }
+            const templateRef = rawTemplateRef ?? "main";
+
+            const pcCompany = await importPaperclipCompany(templateSource, templateRef, companyName);
+            if (pcCompany?.id) {
+              paperclipCompanyId = pcCompany.id;
+              if (pcCompany.name) companyName = pcCompany.name;
+            }
+          }
+
+          send({ step: "approve", label: "Approving CEO and team…" });
+          if (paperclipCompanyId) {
+            const agents = await listCompanyAgents(paperclipCompanyId);
+            for (const agent of agents) {
+              await approveAgent(agent.id);
+              await resumeAgent(agent.id);
+            }
+          }
+
+          send({ step: "heartbeat", label: "Firing first heartbeat…" });
+          if (paperclipCompanyId) {
+            await pollForFirstWorkProduct(paperclipCompanyId, 20000);
+          }
+
+          send({ step: "invite", label: "Sending you the keys…" });
+          if (paperclipCompanyId) {
+            const invite = await createCompanyInvite(paperclipCompanyId, "owner");
+            if (invite?.url) instanceUrl = invite.url;
+          }
+
+          // Persist provisioning result.
+          await db()
+            .update(companies)
+            .set({
+              ...(paperclipCompanyId ? { paperclipCompanyId } : {}),
+              ...(instanceUrl ? { instanceUrl } : {}),
+              status: "running",
+              updatedAt: new Date(),
+            })
+            .where(eq(companies.id, mockCompanyRow.id));
+
+          // Send company-ready email with invite URL (B.4.I3: must use paperclip engine domain).
+          if (instanceUrl && userEmail) {
+            try {
+              await sendCompanyReadyEmail(userEmail, instanceUrl, companyName);
+            } catch { /* Non-fatal */ }
+          }
+
+          const redirectUrl = instanceUrl ?? `${BASE_URL}/account`;
+          send({ done: true, url: redirectUrl });
+          controller.close();
+          return;
+        }
+        // ── End mock session ────────────────────────────────────────────────────
+
         // Verify Stripe payment
         const stripe = getStripe();
         let stripeSession;
