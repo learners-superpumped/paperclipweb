@@ -68,28 +68,51 @@ export async function sendMagicLinkEmail(to: string, url: string) {
   });
 }
 
-export async function sendCreditLowEmail(to: string, creditsRemaining: number, creditsLimit: number, threshold?: number) {
+export async function sendCompanyReadyEmail(to: string, inviteUrl: string, companyName?: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
-  const percent = Math.round((creditsRemaining / creditsLimit) * 100);
-  const thresholdLabel = threshold ? `${threshold} credits` : `${percent}%`;
+  const name = companyName ?? "your AI company";
+  return sendEmail({
+    to,
+    subject: `[Paperclip] ${name} is ready — here are your keys`,
+    body: `
+      <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">${name} is live</h2>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+          Your paperclip instance has been provisioned and your team is ready to work.
+          Click below to enter your company.
+        </p>
+        <a href="${inviteUrl}" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Open ${name}
+        </a>
+        <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
+          Manage your account at ${appUrl}/account
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCreditLowEmail(to: string, dollarsRemaining: number, _dollarsLimit: number, _threshold?: number) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
+  const remaining = typeof dollarsRemaining === "number" ? dollarsRemaining.toFixed(2) : "0.00";
 
   return sendEmail({
     to,
-    subject: `[Paperclip] ${creditsRemaining} actions left — top up to keep going`,
+    subject: `[Paperclip] $${remaining} remaining — top up to keep going`,
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
-        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your credits are running low (${thresholdLabel} alert)</h2>
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your LLM balance is running low</h2>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
-          You have <strong>${creditsRemaining} of ${creditsLimit}</strong> actions remaining this month.
+          You have <strong>$${remaining} remaining</strong> in your LLM credit balance.
         </p>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-          Top up $10 for 50 more actions — applied instantly, no plan change needed.
+          Top up $10 to keep your AI company running — applied instantly.
         </p>
-        <a href="${appUrl}/dashboard/billing" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Top Up — $10 / 50 actions
+        <a href="${appUrl}/account" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Top Up — $10
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
-          Manage your account at ${appUrl}/dashboard/billing
+          Manage your account at ${appUrl}/account
         </p>
       </div>
     `,
@@ -126,21 +149,26 @@ export async function sendSubscriptionCancelledEmail(to: string, name?: string) 
 
 export async function sendMonthlySummaryEmail(to: string, stats: {
   name?: string;
-  actionsUsed: number;
-  actionsLimit: number;
+  dollarsSpent?: number;
+  dollarsBalance?: number;
   tasksCompleted: number;
   companies: string[];
   month: string;
+  // Legacy fields kept for backward compat
+  actionsUsed?: number;
+  actionsLimit?: number;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
   const firstName = (stats.name ?? "there").split(" ")[0];
   const companyList = stats.companies.length > 0
     ? stats.companies.map(c => `<li style="color:#475569;font-size:14px;">${c}</li>`).join("")
     : `<li style="color:#475569;font-size:14px;">No active companies this month</li>`;
+  const spent = (stats.dollarsSpent ?? 0).toFixed(2);
+  const balance = (stats.dollarsBalance ?? 0).toFixed(2);
 
   return sendEmail({
     to,
-    subject: `[Paperclip] Your ${stats.month} summary — ${stats.actionsUsed} actions used`,
+    subject: `[Paperclip] Your ${stats.month} summary — $${spent} used`,
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
         <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 8px;">Your ${stats.month} summary</h2>
@@ -148,8 +176,12 @@ export async function sendMonthlySummaryEmail(to: string, stats: {
 
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-            <span style="color: #64748B; font-size: 13px;">Actions used</span>
-            <span style="color: #0F172A; font-size: 13px; font-weight: 600;">${stats.actionsUsed} / ${stats.actionsLimit}</span>
+            <span style="color: #64748B; font-size: 13px;">LLM spend</span>
+            <span style="color: #0F172A; font-size: 13px; font-weight: 600;">$${spent}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+            <span style="color: #64748B; font-size: 13px;">Remaining balance</span>
+            <span style="color: #0F172A; font-size: 13px; font-weight: 600;">$${balance}</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #64748B; font-size: 13px;">Tasks completed</span>
@@ -162,8 +194,8 @@ export async function sendMonthlySummaryEmail(to: string, stats: {
           ${companyList}
         </ul>
 
-        <a href="${appUrl}/dashboard" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Go to dashboard
+        <a href="${appUrl}/account" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Go to account
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
           Monthly summaries are sent on the 1st of each month.

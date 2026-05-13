@@ -1,7 +1,18 @@
-import Link from "next/link";
+"use client";
+
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import type { CaseTemplate } from "@/lib/cases";
+
+async function handleClone(caseId: string) {
+  const res = await fetch("/api/checkout/public", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caseId }),
+  });
+  const data = await res.json() as { url?: string };
+  if (data.url) window.location.href = data.url;
+}
 
 export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
   return (
@@ -51,12 +62,12 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                 </div>
               </div>
               <div className="mt-auto space-y-2">
-                <Link
-                  href={`/signup?case=${c.id}`}
-                  className={cn(buttonVariants({ size: "sm" }), "block text-center")}
+                <button
+                  onClick={() => handleClone(c.id)}
+                  className={cn(buttonVariants({ size: "sm" }), "block text-center w-full cursor-pointer")}
                 >
                   Clone this company
-                </Link>
+                </button>
                 <div className="space-y-1 pt-2 border-t border-secondary-100">
                   <div className="text-[11px] text-secondary-700 mb-1">
                     YouTube cases

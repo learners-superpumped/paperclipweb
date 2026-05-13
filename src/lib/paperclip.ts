@@ -273,6 +273,153 @@ export async function archivePaperclipCompany(
 }
 
 /**
+ * Import a company from a template repository.
+ * Falls back to createPaperclipCompany if import API fails.
+ */
+export async function importPaperclipCompany(
+  templateSource: string,
+  ref: string,
+  companyName: string
+): Promise<PaperclipCompany | null> {
+  try {
+    const previewRes = await paperclipFetch("/api/companies/import/preview", {
+      method: "POST",
+      body: JSON.stringify({ source: templateSource, ref }),
+    });
+    if (!previewRes.ok) {
+      console.warn("[Paperclip] Import preview failed, falling back to createPaperclipCompany");
+      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    }
+
+    const importRes = await paperclipFetch("/api/companies/import", {
+      method: "POST",
+      body: JSON.stringify({ source: templateSource, ref, name: companyName, target: "new" }),
+    });
+    if (!importRes.ok) {
+      console.warn("[Paperclip] Import failed, falling back to createPaperclipCompany");
+      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    }
+
+    const data = await importRes.json();
+    const parsed = PaperclipCompanySchema.safeParse(data);
+    if (!parsed.success) {
+      if (data && typeof data.id === "string") return data as PaperclipCompany;
+      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    }
+    return parsed.data;
+  } catch (err) {
+    console.error("[Paperclip] importPaperclipCompany error:", err);
+    return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+  }
+}
+
+/**
+ * List agents in a company.
+ */
+export async function listCompanyAgents(
+  companyId: string
+): Promise<Array<{ id: string; slug: string; status: string }>> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/agents`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.filter((a) => a && typeof a.id === "string");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Approve an agent to start working.
+ */
+export async function approveAgent(agentId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/agents/${agentId}/approve`, { method: "POST" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resume a paused agent.
+ */
+export async function resumeAgent(agentId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/agents/${agentId}/resume`, { method: "POST" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sync the monthly budget for a company based on current dollar balance.
+ */
+export async function syncCompanyBudget(
+  companyId: string,
+  balanceDollars: number
+): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/budgets`, {
+      method: "PATCH",
+      body: JSON.stringify({ budgetMonthlyCents: Math.floor(balanceDollars * 100) }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Unarchive a previously archived company.
+ */
+export async function unarchivePaperclipCompany(companyId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/unarchive`, { method: "POST" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Permanently delete a company from Paperclip.
+ */
+export async function deletePaperclipCompany(companyId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Poll until an in-progress issue/work product appears for a company, or timeout.
+ */
+export async function pollForFirstWorkProduct(
+  paperclipCompanyId: string,
+  timeoutMs: number
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await paperclipFetch(`/api/companies/${paperclipCompanyId}/issues?status=in-progress`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) return true;
+      }
+    } catch {
+      // Ignore transient errors and keep polling
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  return false;
+}
+
+/**
  * Update a company's properties.
  */
 export async function updatePaperclipCompany(

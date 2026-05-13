@@ -7,6 +7,14 @@
     {
       "path": "/api/cron/monthly-summary",
       "schedule": "0 0 1 * *"
+    },
+    {
+      "path": "/api/cron/cost-poller",
+      "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/destroy-archived",
+      "schedule": "30 11 * * *"
     }
   ]
 }

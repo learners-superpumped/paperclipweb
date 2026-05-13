@@ -7,6 +7,7 @@ import {
   timestamp,
   index,
   boolean,
+  numeric,
 } from "drizzle-orm/pg-core";
 
 // Use a dedicated schema for paperclipweb
@@ -104,7 +105,9 @@ export const companies = paperclipwebSchema.table(
     slug: text("slug").unique(), // 인스턴스 path/sub-domain 식별자
     caseId: text("case_id"), // 어떤 케이스 템플릿에서 시작했는지
     employeesJson: text("employees_json"), // 이관된 직원 배열 (CaseEmployee[])
-    status: text("status").notNull().default("provisioning"), // provisioning, running, stopped, error
+    status: text("status").notNull().default("provisioning"), // provisioning, running, stopped, archived, deleted, error
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    deleteAfter: timestamp("delete_after", { withTimezone: true }),
     mockMode: boolean("mock_mode").notNull().default(true),
     paperclipCompanyId: text("paperclip_company_id"),
     paperclipVersion: text("paperclip_version").default("latest"),
@@ -208,6 +211,50 @@ export const mockCompanies = paperclipwebSchema.table("mock_companies", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("mock_companies_user_idx").on(table.userId),
+]);
+
+// ─── Stripe Events (idempotency) ───
+export const stripeEvents = paperclipwebSchema.table("stripe_events", {
+  stripeEventId: text("stripe_event_id").primaryKey(),
+  type: text("type").notNull(),
+  processedAt: timestamp("processed_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─── Balances (dollar-based credits) ───
+export const balances = paperclipwebSchema.table("balances", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  dollars: numeric("dollars", { precision: 10, scale: 4 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─── Balance Movements ───
+export const balanceMovements = paperclipwebSchema.table("balance_movements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // grant, topup, spend, refund
+  dollarsDelta: numeric("dollars_delta", { precision: 10, scale: 4 }).notNull(),
+  reference: text("reference"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("balance_movements_user_idx").on(table.userId),
+]);
+
+// ─── Cost Events Mirror ───
+export const costEventsMirror = paperclipwebSchema.table("cost_events_mirror", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  paperclipEventId: text("paperclip_event_id").unique().notNull(),
+  paperclipCompanyId: text("paperclip_company_id"),
+  model: text("model"),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  dollars: numeric("dollars", { precision: 10, scale: 4 }),
+  agentSlug: text("agent_slug"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }),
+  importedAt: timestamp("imported_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("cost_events_user_idx").on(table.userId),
+  index("cost_events_company_idx").on(table.paperclipCompanyId),
 ]);
 
 // ─── Drip Emails ───

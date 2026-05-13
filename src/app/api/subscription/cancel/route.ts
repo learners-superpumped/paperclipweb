@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { users, subscriptions, companies } from "@/db/schema";
 import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
+import { archivePaperclipCompany } from "@/lib/paperclip";
 
 export const dynamic = "force-dynamic";
 
@@ -49,15 +50,24 @@ export async function POST() {
       .set({ status: "canceled" })
       .where(eq(subscriptions.id, activeSub.id));
 
-    await db()
-      .update(companies)
-      .set({ status: "stopped", updatedAt: new Date() })
-      .where(and(eq(companies.userId, user.id), eq(companies.status, "running")));
+    const now = new Date();
+    const deleteAfter = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const userCompanies = await db()
+      .select()
+      .from(companies)
+      .where(eq(companies.userId, user.id));
 
-    await db()
-      .update(companies)
-      .set({ status: "stopped", updatedAt: new Date() })
-      .where(and(eq(companies.userId, user.id), eq(companies.status, "provisioning")));
+    for (const company of userCompanies) {
+      if (company.status === "running" || company.status === "provisioning") {
+        await db()
+          .update(companies)
+          .set({ status: "archived", archivedAt: now, deleteAfter, updatedAt: now })
+          .where(eq(companies.id, company.id));
+        if (company.paperclipCompanyId) {
+          await archivePaperclipCompany(company.paperclipCompanyId).catch(() => {});
+        }
+      }
+    }
 
     try {
       await sendSubscriptionCancelledEmail(user.email, user.name ?? undefined);

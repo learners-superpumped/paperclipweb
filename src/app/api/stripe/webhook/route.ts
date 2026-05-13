@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
-import { users, subscriptions, invoices, companies } from "@/db/schema";
+import { users, subscriptions, invoices, companies, stripeEvents, balances, balanceMovements } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
@@ -18,6 +18,8 @@ import {
   createPaperclipCompany,
   createCompanyInvite,
   registerGstackSkills,
+  archivePaperclipCompany,
+  syncCompanyBudget,
 } from "@/lib/paperclip";
 import type Stripe from "stripe";
 
@@ -62,6 +64,20 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Idempotency: skip already-processed events
+    const alreadyProcessed = await db()
+      .select()
+      .from(stripeEvents)
+      .where(eq(stripeEvents.stripeEventId, event.id))
+      .limit(1);
+    if (alreadyProcessed[0]) {
+      return NextResponse.json({ received: true, skipped: true });
+    }
+    await db().insert(stripeEvents).values({
+      stripeEventId: event.id,
+      type: event.type,
+    }).onConflictDoNothing();
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -170,6 +186,7 @@ export async function POST(req: Request) {
           // Top-up purchase completed
           const credits = parseInt(topupCredits, 10);
           const price = topupPrice ? parseFloat(topupPrice) : 0;
+          const topupDollars = "4.5000"; // $4.50 LLM credit per topup
 
           await addCreditTransaction({
             userId,
@@ -177,6 +194,40 @@ export async function POST(req: Request) {
             type: "topup",
             description: `Top-up ${topupPackage}: +${credits} credits`,
           });
+
+          // Add dollar balance for LLM usage
+          await db()
+            .insert(balances)
+            .values({ userId, dollars: topupDollars })
+            .onConflictDoNothing();
+          await db()
+            .update(balances)
+            .set({
+              dollars: `(SELECT dollars + ${topupDollars} FROM paperclipweb.balances WHERE user_id = '${userId}')`,
+              updatedAt: new Date(),
+            })
+            .where(eq(balances.userId, userId));
+          await db().insert(balanceMovements).values({
+            userId,
+            kind: "topup",
+            dollarsDelta: topupDollars,
+            reference: session.id,
+          });
+
+          // Sync budget with paperclip engine (best-effort)
+          try {
+            const [companyRow] = await db()
+              .select()
+              .from(companies)
+              .where(eq(companies.userId, userId))
+              .limit(1);
+            if (companyRow?.paperclipCompanyId) {
+              const [bal] = await db().select().from(balances).where(eq(balances.userId, userId)).limit(1);
+              if (bal) await syncCompanyBudget(companyRow.paperclipCompanyId, parseFloat(bal.dollars));
+            }
+          } catch {
+            // Non-fatal
+          }
 
           // Amplitude: credits_topped_up
           await trackServerCreditsToppedUp(userId, topupPackage, credits, price);
@@ -265,17 +316,25 @@ export async function POST(req: Request) {
           .set({ status: "canceled" })
           .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
 
-        // Stop all running instances for this user
-        await db()
-          .update(companies)
-          .set({ status: "stopped", updatedAt: new Date() })
-          .where(and(eq(companies.userId, user.id), eq(companies.status, "running")));
+        // Archive running and provisioning instances (30-day retention)
+        const now = new Date();
+        const deleteAfter = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const companiesToArchive = await db()
+          .select()
+          .from(companies)
+          .where(and(eq(companies.userId, user.id)));
 
-        // Also stop provisioning instances
-        await db()
-          .update(companies)
-          .set({ status: "stopped", updatedAt: new Date() })
-          .where(and(eq(companies.userId, user.id), eq(companies.status, "provisioning")));
+        for (const company of companiesToArchive) {
+          if (company.status === "running" || company.status === "provisioning") {
+            await db()
+              .update(companies)
+              .set({ status: "archived", archivedAt: now, deleteAfter, updatedAt: now })
+              .where(eq(companies.id, company.id));
+            if (company.paperclipCompanyId) {
+              await archivePaperclipCompany(company.paperclipCompanyId).catch(() => {});
+            }
+          }
+        }
 
         // Send human-language cancellation email (best-effort)
         try {
