@@ -381,24 +381,28 @@ export async function GET(req: NextRequest) {
           if (tmpl?.company) companyName = tmpl.company;
         }
 
+        // templateSource always carries the caseId path (needed for inline fallback).
         const templateSource = resolvedCaseId
           ? `learners-superpumped/paperclip-templates/${resolvedCaseId}`
           : "";
 
         const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-        if (!rawTemplateRef || !/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
-          throw new Error(
-            `[Provisioning] PAPERCLIP_TEMPLATE_REF must be a 40-char commit SHA (got: '${rawTemplateRef ?? ""}').`
+        const hasValidRef = rawTemplateRef && /^[0-9a-f]{40}$/i.test(rawTemplateRef);
+        if (!hasValidRef) {
+          console.warn(
+            `[Provisioning] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef ?? ""}' is not a 40-char SHA — passing empty ref so importPaperclipCompany falls back to inline template.`
           );
         }
-        const templateRef = rawTemplateRef;
+        // With empty ref, buildGithubTreeUrl produces an invalid URL → preview fails →
+        // importPaperclipCompany falls back to inlineImportPaperclipCompany with the correct caseId.
+        const templateRef = hasValidRef ? rawTemplateRef! : "";
 
         // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
         // Keep clean companyName for DB storage.
         const rand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
         const paperclipCompanyName = `${rand3} · ${companyName}`;
 
-        const pcCompany = await importPaperclipCompany(templateSource || "", templateRef, paperclipCompanyName);
+        const pcCompany = await importPaperclipCompany(templateSource, templateRef, paperclipCompanyName);
 
         if (pcCompany?.id) {
           paperclipCompanyId = pcCompany.id;

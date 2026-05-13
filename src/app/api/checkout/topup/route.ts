@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sql, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { users, creditTransactions } from "@/db/schema";
+import { users, creditTransactions, balances, balanceMovements } from "@/db/schema";
 import { TOPUP } from "@/lib/constants";
 import { ensurePrice } from "@/lib/stripe-ensure";
 import { getStripe } from "@/lib/stripe";
@@ -29,11 +29,26 @@ export async function POST() {
 
   // Test / mock mode: apply credits directly (same as mock-topup).
   if (isMock || isTest) {
-    const [updated] = await db()
-      .update(users)
-      .set({ creditsBalance: sql`${users.creditsBalance} + ${TOPUP.credits}` })
-      .where(eq(users.id, user.id))
-      .returning({ creditsBalance: users.creditsBalance, creditsLimit: users.creditsLimit });
+    const topupDollars = "4.5000";
+
+    // B.5.I4: update dollar balance (same path as live Stripe webhook).
+    await db()
+      .insert(balances)
+      .values({ userId: user.id, dollars: topupDollars })
+      .onConflictDoUpdate({
+        target: balances.userId,
+        set: {
+          dollars: sql`${balances.dollars} + ${topupDollars}`,
+          updatedAt: new Date(),
+        },
+      });
+
+    await db().insert(balanceMovements).values({
+      userId: user.id,
+      kind: "topup",
+      dollarsDelta: topupDollars,
+      reference: `test-topup-${Date.now()}`,
+    });
 
     await db().insert(creditTransactions).values({
       userId: user.id,
@@ -42,10 +57,11 @@ export async function POST() {
       description: `$${TOPUP.price} top up = ${TOPUP.credits} actions (${isTest ? "test" : "mock"})`,
     });
 
+    const [bal] = await db().select().from(balances).where(eq(balances.userId, user.id)).limit(1);
+
     return NextResponse.json({
       ok: true,
-      creditsBalance: updated?.creditsBalance ?? user.creditsBalance + TOPUP.credits,
-      creditsLimit: updated?.creditsLimit ?? user.creditsLimit,
+      dollars: parseFloat(bal?.dollars ?? topupDollars).toFixed(2),
     });
   }
 
