@@ -109,11 +109,7 @@ async function paperclipFetch(
   } else {
     const cookie = await getPaperclipSessionCookie();
     if (cookie) {
-      if (cookie.startsWith("__bearer__")) {
-        headers.Authorization = `Bearer ${cookie.slice(10)}`;
-      } else {
-        headers.Cookie = cookie;
-      }
+      headers.Cookie = cookie;
     }
   }
 
