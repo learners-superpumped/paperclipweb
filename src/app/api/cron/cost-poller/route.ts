@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { companies, balances, balanceMovements, costEventsMirror, users } from "@/db/schema";
-import { eq, isNotNull, sql } from "drizzle-orm";
-import { syncCompanyBudget } from "@/lib/paperclip";
+import { eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { syncCompanyBudget, pollForFirstWorkProduct } from "@/lib/paperclip";
 import { sendCreditLowEmail } from "@/lib/agentmail";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
       id: companies.id,
       userId: companies.userId,
       paperclipCompanyId: companies.paperclipCompanyId,
+      firstHeartbeatAt: companies.firstHeartbeatAt,
+      status: companies.status,
     })
     .from(companies)
     .where(isNotNull(companies.paperclipCompanyId));
@@ -123,6 +125,17 @@ export async function GET(req: NextRequest) {
           reference: company.paperclipCompanyId,
         });
       });
+    }
+
+    // Retroactively record first_heartbeat_at for running companies that don't have it yet
+    if (!company.firstHeartbeatAt && company.status === "running" && company.paperclipCompanyId) {
+      const found = await pollForFirstWorkProduct(company.paperclipCompanyId, 500);
+      if (found) {
+        await db()
+          .update(companies)
+          .set({ firstHeartbeatAt: new Date(), updatedAt: new Date() })
+          .where(eq(companies.id, company.id));
+      }
     }
 
     // Get updated balance and sync budget

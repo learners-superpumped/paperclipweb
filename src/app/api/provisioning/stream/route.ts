@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
           // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
-            const found = await pollForFirstWorkProduct(paperclipCompanyId, 3000);
+            const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
             if (found) mockFirstHeartbeatAt = new Date();
           }
 
@@ -422,7 +422,7 @@ export async function GET(req: NextRequest) {
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
-          const found = await pollForFirstWorkProduct(paperclipCompanyId, 3000);
+          const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
           if (found) firstHeartbeatAt = new Date();
         }
 
