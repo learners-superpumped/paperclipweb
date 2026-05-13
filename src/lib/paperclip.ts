@@ -21,6 +21,7 @@ async function getPaperclipSessionCookie(): Promise<string | null> {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: baseUrl },
     body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
+    cache: "no-store",
   });
 
   if (!res.ok) {
@@ -28,44 +29,31 @@ async function getPaperclipSessionCookie(): Promise<string | null> {
     return null;
   }
 
-  // Strategy 1: named session cookies (better-auth convention)
-  const setCookie = res.headers.getSetCookie?.() ?? [];
-  const namedCookie = setCookie
-    .map((c) => c.split(";")[0])
-    .filter((c) => c.startsWith("better-auth") || c.startsWith("paperclip") || c.startsWith("session"))
-    .join("; ");
-  if (namedCookie) {
-    cachedSessionCookie = namedCookie;
-    sessionExpiresAt = Date.now() + 55 * 60 * 1000;
-    return namedCookie;
+  // Strategy 1: getSetCookie() API (Node.js 18.14+)
+  let cookiePair: string | null = null;
+  const headersAny = res.headers as unknown as { getSetCookie?: () => string[] };
+  if (typeof headersAny.getSetCookie === "function") {
+    const setCookies = headersAny.getSetCookie();
+    const pairs = setCookies.map((c) => c.split(";")[0]).filter(Boolean);
+    if (pairs.length > 0) cookiePair = pairs.join("; ");
   }
 
-  // Strategy 2: all cookies as fallback (some versions)
-  const allCookies = setCookie.map((c) => c.split(";")[0]).join("; ");
-  if (allCookies) {
-    cachedSessionCookie = allCookies;
-    sessionExpiresAt = Date.now() + 55 * 60 * 1000;
-    return allCookies;
-  }
-
-  // Strategy 3: extract Bearer token from JSON body (better-auth v1+ may return token in body)
-  try {
-    const body = await res.clone().json() as Record<string, unknown>;
-    const token =
-      (body?.token as string | undefined) ??
-      ((body?.session as Record<string, unknown> | undefined)?.token as string | undefined) ??
-      ((body?.data as Record<string, unknown> | undefined)?.token as string | undefined);
-    if (token) {
-      // Store with prefix so paperclipFetch uses Authorization header
-      cachedSessionCookie = `__bearer__${token}`;
-      sessionExpiresAt = Date.now() + 55 * 60 * 1000;
-      return cachedSessionCookie;
+  // Strategy 2: fallback via get('set-cookie') (works in all Node.js/fetch environments)
+  if (!cookiePair) {
+    const rawSetCookie = res.headers.get("set-cookie");
+    if (rawSetCookie) {
+      // The raw header may contain "name=value; Path=...; ..." — extract just name=value
+      cookiePair = rawSetCookie.split(";")[0].trim();
     }
-  } catch {
-    // JSON parse failure — no body token
   }
 
-  console.error("[Paperclip] Could not extract session from auth response (no cookies, no body token)");
+  if (cookiePair) {
+    cachedSessionCookie = cookiePair;
+    sessionExpiresAt = Date.now() + 55 * 60 * 1000;
+    return cookiePair;
+  }
+
+  console.error("[Paperclip] Could not extract session cookie from auth response");
   return null;
 }
 
@@ -193,7 +181,7 @@ export async function createPaperclipCompany(
  */
 export async function createCompanyInvite(
   companyId: string,
-  humanRole: "ceo" | "admin" | "member" = "ceo",
+  humanRole: "owner" | "admin" | "operator" | "viewer" = "owner",
 ): Promise<{ token: string; url: string; expiresAt: string } | null> {
   try {
     const res = await paperclipFetch(`/api/companies/${companyId}/invites`, {

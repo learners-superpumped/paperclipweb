@@ -146,7 +146,7 @@ export async function POST(req: Request) {
               );
               if (pcCompany?.id) {
                 paperclipCompanyId = pcCompany.id;
-                const invite = await createCompanyInvite(pcCompany.id, "ceo");
+                const invite = await createCompanyInvite(pcCompany.id, "owner");
                 if (invite?.url) instanceUrl = invite.url;
               }
             }

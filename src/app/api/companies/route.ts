@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
       // 사용자가 자기 회사로 직접 들어가는 진짜 경험을 주기 위해 invite 발급.
       // 실패 시 fallback: paperclip company URL 자체를 instanceUrl 로 (사용자가 거기서 직접 로그인).
-      const invite = await createCompanyInvite(pcCompany.id, "ceo");
+      const invite = await createCompanyInvite(pcCompany.id, "owner");
       const instanceUrl = invite?.url ?? getPaperclipCompanyUrl(pcCompany.id);
 
       const company = await createCompany({
