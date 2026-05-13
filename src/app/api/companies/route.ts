@@ -6,6 +6,7 @@ import { PLANS } from "@/lib/constants";
 import {
   isPaperclipConfigured,
   createPaperclipCompany,
+  createCompanyInvite,
   getPaperclipCompanyUrl,
 } from "@/lib/paperclip";
 
@@ -78,7 +79,10 @@ export async function POST(req: Request) {
         );
       }
 
-      const instanceUrl = getPaperclipCompanyUrl(pcCompany.id);
+      // 사용자가 자기 회사로 직접 들어가는 진짜 경험을 주기 위해 invite 발급.
+      // 실패 시 fallback: paperclip company URL 자체를 instanceUrl 로 (사용자가 거기서 직접 로그인).
+      const invite = await createCompanyInvite(pcCompany.id, "ceo");
+      const instanceUrl = invite?.url ?? getPaperclipCompanyUrl(pcCompany.id);
 
       const company = await createCompany({
         userId: user.id,
@@ -88,7 +92,7 @@ export async function POST(req: Request) {
         status: "running",
       });
 
-      return NextResponse.json({ company }, { status: 201 });
+      return NextResponse.json({ company, inviteUrl: invite?.url ?? null }, { status: 201 });
     }
 
     // Paperclip not configured — demo mode

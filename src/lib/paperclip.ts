@@ -163,6 +163,44 @@ export async function createPaperclipCompany(
 }
 
 /**
+ * Create a one-time invite for a paperclipweb subscriber to enter their own
+ * paperclip company directly. The returned URL is what the user should be
+ * redirected/iframed into — that is the "real paperclip experience" the user
+ * paid for.
+ *
+ * Allowed join types: `human` (regular user) by default. Returns full URL or null.
+ */
+export async function createCompanyInvite(
+  companyId: string,
+  humanRole: "ceo" | "admin" | "member" = "ceo",
+): Promise<{ token: string; url: string; expiresAt: string } | null> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/invites`, {
+      method: "POST",
+      body: JSON.stringify({
+        allowedJoinTypes: "human",
+        humanRole,
+      }),
+    });
+    if (!res.ok) {
+      console.error("[Paperclip] Create invite failed:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const data = (await res.json()) as { token?: string; expiresAt?: string };
+    if (!data.token) return null;
+    const baseUrl = PAPERCLIP_API_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+    return {
+      token: data.token,
+      url: `${baseUrl}/invite/${data.token}`,
+      expiresAt: data.expiresAt ?? "",
+    };
+  } catch (err) {
+    console.error("[Paperclip] Create invite error:", err);
+    return null;
+  }
+}
+
+/**
  * Get a single company by ID.
  */
 export async function getPaperclipCompany(
