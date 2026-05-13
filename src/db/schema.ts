@@ -112,6 +112,7 @@ export const companies = paperclipwebSchema.table(
     paperclipCompanyId: text("paperclip_company_id"),
     paperclipVersion: text("paperclip_version").default("latest"),
     instanceUrl: text("instance_url"),
+    firstHeartbeatAt: timestamp("first_heartbeat_at", { withTimezone: true }),
     creditsUsed: integer("credits_used").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

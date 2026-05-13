@@ -78,7 +78,7 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                       href={y.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-xs text-secondary-700 underline decoration-secondary-300 hover:decoration-primary"
+                      className="flex items-center py-1.5 text-xs text-secondary-700 underline decoration-secondary-300 hover:decoration-primary min-h-[24px]"
                     >
                       ▶ {y.title}
                     </a>

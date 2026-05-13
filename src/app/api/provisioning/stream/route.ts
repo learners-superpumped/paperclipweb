@@ -100,17 +100,18 @@ export async function GET(req: NextRequest) {
           let paperclipCompanyId: string | undefined;
           let instanceUrl: string | undefined;
 
+          const mockRawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
+          const templateRef = mockRawTemplateRef ?? "main";
+
           send({ step: "import", label: "Importing company template…" });
 
           if (isPaperclipConfigured() && resolvedCaseId) {
             const templateSource = `learners-superpumped/paperclip-templates/${resolvedCaseId}`;
-            const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-            if (!rawTemplateRef) {
+            if (!mockRawTemplateRef) {
               console.error("[Provisioning/mock] PAPERCLIP_TEMPLATE_REF not set — falling back to 'main'.");
-            } else if (!/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
-              console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef}' is not a 40-char SHA.`);
+            } else if (!/^[0-9a-f]{40}$/i.test(mockRawTemplateRef)) {
+              console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${mockRawTemplateRef}' is not a 40-char SHA.`);
             }
-            const templateRef = rawTemplateRef ?? "main";
 
             const mockRand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
             const mockPaperclipCompanyName = `${mockRand3} · ${companyName}`;
@@ -132,8 +133,10 @@ export async function GET(req: NextRequest) {
 
           send({ step: "heartbeat", label: "Firing first heartbeat…" });
           // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
+          let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
-            await pollForFirstWorkProduct(paperclipCompanyId, 0);
+            const found = await pollForFirstWorkProduct(paperclipCompanyId, 3000);
+            if (found) mockFirstHeartbeatAt = new Date();
           }
 
           send({ step: "invite", label: "Sending you the keys…" });
@@ -148,6 +151,8 @@ export async function GET(req: NextRequest) {
             .set({
               ...(paperclipCompanyId ? { paperclipCompanyId } : {}),
               ...(instanceUrl ? { instanceUrl } : {}),
+              paperclipVersion: templateRef,
+              ...(mockFirstHeartbeatAt ? { firstHeartbeatAt: mockFirstHeartbeatAt } : {}),
               status: "running",
               updatedAt: new Date(),
             })
@@ -415,8 +420,10 @@ export async function GET(req: NextRequest) {
 
         // Step 3: Heartbeat — fired by approve+resume above; poll briefly for fast completions
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
+        let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
-          await pollForFirstWorkProduct(paperclipCompanyId, 0);
+          const found = await pollForFirstWorkProduct(paperclipCompanyId, 3000);
+          if (found) firstHeartbeatAt = new Date();
         }
 
         // Step 4: Create invite
@@ -435,6 +442,8 @@ export async function GET(req: NextRequest) {
               .set({
                 paperclipCompanyId,
                 instanceUrl,
+                paperclipVersion: templateRef,
+                ...(firstHeartbeatAt ? { firstHeartbeatAt } : {}),
                 status: "running",
                 updatedAt: new Date(),
               })
@@ -448,6 +457,8 @@ export async function GET(req: NextRequest) {
             caseId: resolvedCaseId || undefined,
             paperclipCompanyId,
             instanceUrl,
+            paperclipVersion: templateRef,
+            ...(firstHeartbeatAt ? { firstHeartbeatAt } : {}),
             legacyMode: false,
             status: paperclipCompanyId ? "running" : "provisioning",
           }).onConflictDoNothing();

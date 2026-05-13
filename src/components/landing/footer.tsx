@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="border-t border-secondary-200 py-10">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/" className="flex items-center gap-2 cursor-pointer py-1.5 min-h-[24px]">
           <Paperclip className="h-5 w-5 text-primary" />
           <span className="font-bold text-secondary-800">paperclip</span>
         </Link>

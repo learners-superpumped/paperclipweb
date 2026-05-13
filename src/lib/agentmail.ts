@@ -125,19 +125,19 @@ export async function sendSubscriptionCancelledEmail(to: string, name?: string) 
 
   return sendEmail({
     to,
-    subject: "[Paperclip] Your subscription has been cancelled",
+    subject: "[Paperclip] Your company is on pause",
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
-        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your Paperclip subscription has been cancelled</h2>
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Your subscription has ended</h2>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
-          Hi ${firstName} — your Pro subscription has ended and your instance has been stopped.
+          Hi ${firstName} — we've paused your Pro subscription.
         </p>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
-          <strong>Your data is safe.</strong> We keep everything for 30 days — your companies, employees, and task history are all still there.
-          If you change your mind, resubscribe any time to pick up exactly where you left off.
+          <strong>Everything is still there.</strong> Come back any time in the next 30 days and your company, employees, and history will be exactly where you left them.
+          After 30 days we'll clean up the data.
         </p>
         <a href="${appUrl}/cases" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Resubscribe — $29/month
+          Come back — $29/month
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
           Questions? Reply to this email or visit ${appUrl}
