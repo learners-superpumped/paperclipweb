@@ -273,6 +273,48 @@ export async function archivePaperclipCompany(
 }
 
 /**
+ * Build a GitHub tree URL from a shorthand source ("owner/repo/path") + ref.
+ * paperclip's `portabilitySourceSchema` only accepts a full URL (z.string().url()), not
+ * a separate (source, ref) pair. So we assemble the canonical GitHub tree URL here.
+ */
+function buildGithubTreeUrl(source: string, ref: string): string {
+  if (/^https?:\/\//i.test(source)) return source;
+  const parts = source.split("/").filter(Boolean);
+  if (parts.length < 2) {
+    throw new Error(
+      `[Paperclip] templateSource must be "owner/repo[/path]" or a full URL, got: ${source}`
+    );
+  }
+  const [owner, repo, ...rest] = parts;
+  const subpath = rest.join("/");
+  const treeSuffix = subpath ? `tree/${ref}/${subpath}` : `tree/${ref}`;
+  return `https://github.com/${owner}/${repo}/${treeSuffix}`;
+}
+
+/**
+ * Build the portability request body for paperclip's /api/companies/import endpoints.
+ * Conforms to `companyPortabilityImportSchema` (paperclip OSS — see
+ * packages/shared/src/validators/company-portability.ts):
+ *   - source: discriminatedUnion("type", [ {type:"github", url}, {type:"inline", files} ])
+ *   - target: discriminatedUnion("mode", [ {mode:"new_company", newCompanyName}, ... ])
+ */
+function buildImportBody(githubUrl: string, companyName: string) {
+  return {
+    source: { type: "github" as const, url: githubUrl },
+    target: { mode: "new_company" as const, newCompanyName: companyName },
+    include: {
+      company: true,
+      agents: true,
+      projects: true,
+      issues: true,
+      skills: true,
+    },
+    agents: "all" as const,
+    collisionStrategy: "rename" as const,
+  };
+}
+
+/**
  * Import a company from a template repository.
  * Falls back to createPaperclipCompany if import API fails.
  */
@@ -282,31 +324,57 @@ export async function importPaperclipCompany(
   companyName: string
 ): Promise<PaperclipCompany | null> {
   try {
+    let githubUrl: string;
+    try {
+      githubUrl = buildGithubTreeUrl(templateSource, ref);
+    } catch (err) {
+      console.error("[Paperclip] buildGithubTreeUrl failed:", err);
+      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    }
+
+    const body = buildImportBody(githubUrl, companyName);
+    const bodyJson = JSON.stringify(body);
+
     const previewRes = await paperclipFetch("/api/companies/import/preview", {
       method: "POST",
-      body: JSON.stringify({ source: templateSource, ref }),
+      body: bodyJson,
     });
     if (!previewRes.ok) {
-      console.warn("[Paperclip] Import preview failed, falling back to createPaperclipCompany");
+      const errText = await previewRes.text().catch(() => "");
+      console.warn(
+        `[Paperclip] Import preview failed (${previewRes.status}): ${errText.slice(0, 300)} — falling back to createPaperclipCompany`
+      );
       return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
     }
 
     const importRes = await paperclipFetch("/api/companies/import", {
       method: "POST",
-      body: JSON.stringify({ source: templateSource, ref, name: companyName, target: "new" }),
+      body: bodyJson,
     });
     if (!importRes.ok) {
-      console.warn("[Paperclip] Import failed, falling back to createPaperclipCompany");
+      const errText = await importRes.text().catch(() => "");
+      console.warn(
+        `[Paperclip] Import failed (${importRes.status}): ${errText.slice(0, 300)} — falling back to createPaperclipCompany`
+      );
       return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
     }
 
     const data = await importRes.json();
-    const parsed = PaperclipCompanySchema.safeParse(data);
-    if (!parsed.success) {
-      if (data && typeof data.id === "string") return data as PaperclipCompany;
-      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    // paperclip's applyImport returns an ImportResult shape. The created company can
+    // surface either at the top level or nested. Try common shapes before falling back.
+    const candidate =
+      (data && typeof data === "object" && (data as Record<string, unknown>).company) ||
+      (data && typeof data === "object" && (data as Record<string, unknown>).createdCompany) ||
+      data;
+    const parsed = PaperclipCompanySchema.safeParse(candidate);
+    if (parsed.success) return parsed.data;
+    if (candidate && typeof (candidate as Record<string, unknown>).id === "string") {
+      return candidate as PaperclipCompany;
     }
-    return parsed.data;
+    console.warn(
+      "[Paperclip] Import succeeded but response shape unrecognized; falling back to createPaperclipCompany"
+    );
+    return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
   } catch (err) {
     console.error("[Paperclip] importPaperclipCompany error:", err);
     return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
