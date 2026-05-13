@@ -34,6 +34,12 @@ export default async function InstancePage({
     .limit(1);
   if (!company) notFound();
 
+  // spec 13.F2 강제: 진짜 인스턴스 활성화된 사용자는 paperclip 의 진짜 UI 로 즉시 redirect.
+  // paperclipweb 자체 InstanceShell 은 mock 온보딩 (mockMode=true) 단계만 노출.
+  if (!company.mockMode && company.instanceUrl) {
+    redirect(company.instanceUrl);
+  }
+
   const taskRows = await db()
     .select()
     .from(tasks)
