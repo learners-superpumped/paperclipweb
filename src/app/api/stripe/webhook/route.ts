@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
-import { users, subscriptions, invoices, companies, stripeEvents, balances, balanceMovements } from "@/db/schema";
+import { users, subscriptions, invoices, companies, stripeEvents, balances, balanceMovements, creditTransactions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
@@ -94,34 +94,34 @@ export async function POST(req: Request) {
           const planCredits = PLAN_CREDITS[plan] ?? PLAN_CREDITS.free;
           const price = PLAN_PRICES[plan] ?? 0;
 
-          // Create subscription record
-          await db().insert(subscriptions).values({
-            userId,
-            stripeSubscriptionId: session.subscription as string,
-            plan,
-            status: "active",
-            currentPeriodStart: new Date(),
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          });
-
-          // Update user plan and credits
-          await db()
-            .update(users)
-            .set({
+          // Atomically create subscription + update user + record credit transaction
+          await db().transaction(async (tx) => {
+            await tx.insert(subscriptions).values({
+              userId,
+              stripeSubscriptionId: session.subscription as string,
               plan,
-              creditsBalance: planCredits.balance,
-              creditsLimit: planCredits.limit,
-              stripeCustomerId: session.customer as string,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, userId));
+              status: "active",
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            });
 
-          // Credit transaction
-          await addCreditTransaction({
-            userId,
-            amount: planCredits.balance,
-            type: "subscription",
-            description: `${plan} plan activated - ${planCredits.balance} credits`,
+            await tx
+              .update(users)
+              .set({
+                plan,
+                creditsBalance: planCredits.balance,
+                creditsLimit: planCredits.limit,
+                stripeCustomerId: session.customer as string,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, userId));
+
+            await tx.insert(creditTransactions).values({
+              userId,
+              amount: planCredits.balance,
+              type: "subscription",
+              description: `${plan} plan activated - ${planCredits.balance} credits`,
+            });
           });
 
           // Amplitude: checkout_completed

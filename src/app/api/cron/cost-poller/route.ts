@@ -75,42 +75,53 @@ export async function GET(req: NextRequest) {
 
     let totalNewSpend = 0;
 
+    // Insert new events; use .returning() to count only actually-inserted rows,
+    // preventing double-spend when concurrent cron runs see overlapping event windows.
     for (const ev of events) {
       if (!ev.id) continue;
-      const dollars = ev.dollars ?? 0;
+      const evDollars = ev.dollars ?? 0;
       try {
-        await db().insert(costEventsMirror).values({
-          userId: company.userId,
-          paperclipEventId: ev.id,
-          paperclipCompanyId: company.paperclipCompanyId,
-          model: ev.model ?? null,
-          inputTokens: ev.inputTokens ?? null,
-          outputTokens: ev.outputTokens ?? null,
-          dollars: String(dollars),
-          agentSlug: ev.agentSlug ?? null,
-          occurredAt: ev.occurredAt ? new Date(ev.occurredAt) : null,
-        }).onConflictDoNothing();
-        totalNewSpend += dollars;
+        const inserted = await db()
+          .insert(costEventsMirror)
+          .values({
+            userId: company.userId,
+            paperclipEventId: ev.id,
+            paperclipCompanyId: company.paperclipCompanyId,
+            model: ev.model ?? null,
+            inputTokens: ev.inputTokens ?? null,
+            outputTokens: ev.outputTokens ?? null,
+            dollars: String(evDollars),
+            agentSlug: ev.agentSlug ?? null,
+            occurredAt: ev.occurredAt ? new Date(ev.occurredAt) : null,
+          })
+          .onConflictDoNothing()
+          .returning({ id: costEventsMirror.id });
+        if (inserted.length > 0) {
+          totalNewSpend += evDollars;
+        }
       } catch {
-        // Duplicate — skip
+        // unexpected error — skip event
       }
     }
 
     if (totalNewSpend > 0) {
-      // Deduct from balance
-      await db()
-        .update(balances)
-        .set({
-          dollars: sql`GREATEST(${balances.dollars} - ${String(totalNewSpend)}, 0)`,
-          updatedAt: new Date(),
-        })
-        .where(eq(balances.userId, company.userId));
-
-      await db().insert(balanceMovements).values({
-        userId: company.userId,
-        kind: "spend",
-        dollarsDelta: String(-totalNewSpend),
-        reference: company.paperclipCompanyId,
+      // Deduct balance inside a transaction with a transaction-level advisory lock
+      // so concurrent cost-poller runs for the same user cannot interleave.
+      await db().transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${company.userId}))`);
+        await tx
+          .update(balances)
+          .set({
+            dollars: sql`GREATEST(${balances.dollars} - ${String(totalNewSpend)}, 0)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(balances.userId, company.userId));
+        await tx.insert(balanceMovements).values({
+          userId: company.userId,
+          kind: "spend",
+          dollarsDelta: String(-totalNewSpend),
+          reference: company.paperclipCompanyId,
+        });
       });
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, CreditCard, XCircle, RefreshCw } from "lucide-react";
+import { ExternalLink, CreditCard, XCircle, RefreshCw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function AccountActions({
@@ -61,9 +61,14 @@ export function AccountActions({
           Open my paperclip
         </a>
       ) : (
-        <div className="text-sm text-secondary-500 py-2">
-          Your paperclip is being provisioned. Check back shortly.
-        </div>
+        <a
+          href="/"
+          className="flex items-center gap-2 w-full justify-center rounded-lg border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/5 transition"
+          data-testid="resubscribe-btn"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Re-subscribe
+        </a>
       )}
 
       <Button

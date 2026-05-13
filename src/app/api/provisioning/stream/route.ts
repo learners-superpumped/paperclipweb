@@ -265,7 +265,13 @@ export async function GET(req: NextRequest) {
           ? `learners-superpumped/paperclip-templates/${resolvedCaseId}`
           : "";
 
-        const templateRef = process.env.PAPERCLIP_TEMPLATE_REF ?? "main";
+        const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
+        if (!rawTemplateRef) {
+          console.error("[Provisioning] PAPERCLIP_TEMPLATE_REF is not set — falling back to 'main'. Set this to a pinned commit SHA to prevent template drift.");
+        } else if (!/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
+          console.warn(`[Provisioning] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef}' is not a 40-char SHA. Template drift risk: any push to this ref changes what subscribers receive.`);
+        }
+        const templateRef = rawTemplateRef ?? "main";
         const pcCompany = templateSource
           ? await importPaperclipCompany(templateSource, templateRef, companyName)
           : await importPaperclipCompany("", templateRef, companyName);

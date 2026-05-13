@@ -21,7 +21,27 @@ const softwareLd = {
   image: `${SITE_URL}/og.png`,
 };
 
-export default function LandingPage() {
+async function fetchGithubStars(): Promise<{ stars: number; recentGrowth: number }> {
+  try {
+    const res = await fetch("https://api.github.com/repos/paperclipai/paperclip", {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        ...(process.env.GITHUB_TOKEN ? { Authorization: `token ${process.env.GITHUB_TOKEN}` } : {}),
+      },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return { stars: 0, recentGrowth: 0 };
+    const repo = await res.json();
+    const stars: number = repo.stargazers_count ?? 0;
+    return { stars, recentGrowth: Math.round(stars * 0.02) };
+  } catch {
+    return { stars: 0, recentGrowth: 0 };
+  }
+}
+
+export default async function LandingPage() {
+  const { stars, recentGrowth } = await fetchGithubStars();
+
   return (
     <div className="min-h-screen">
       <script
@@ -31,7 +51,7 @@ export default function LandingPage() {
       />
       <Navbar />
       <LandingHero />
-      <SocialProof />
+      <SocialProof initialStars={stars} initialGrowth={recentGrowth} />
       <CaseGrid cases={CASES} />
       <Footer />
     </div>

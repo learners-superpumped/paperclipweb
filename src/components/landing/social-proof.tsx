@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Star, TrendingUp, Users, Twitter } from "lucide-react";
 
 const TWEETS = [
@@ -30,20 +30,16 @@ const TWEETS = [
   },
 ];
 
-export function SocialProof() {
-  const [stars, setStars] = useState<number>(0);
-  const [growth, setGrowth] = useState<number>(0);
+export function SocialProof({
+  initialStars = 0,
+  initialGrowth = 0,
+}: {
+  initialStars?: number;
+  initialGrowth?: number;
+}) {
+  const [stars] = useState<number>(initialStars);
+  const [growth] = useState<number>(initialGrowth);
   const [tweetIndex, setTweetIndex] = useState(0);
-
-  useEffect(() => {
-    fetch("/api/github/stars")
-      .then((r) => r.json())
-      .then((d) => {
-        setStars(d.stars || 0);
-        setGrowth(d.recentGrowth || 0);
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -68,7 +64,7 @@ export function SocialProof() {
             </div>
             <p className="text-sm text-secondary-500">GitHub Stars</p>
             {growth > 0 && (
-              <div className="flex items-center gap-1 mt-2 text-xs text-accent">
+              <div className="flex items-center gap-1 mt-2 text-xs text-accent-700">
                 <TrendingUp className="h-3 w-3" />
                 +{growth.toLocaleString()} this month
               </div>

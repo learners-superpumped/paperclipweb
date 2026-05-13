@@ -173,7 +173,7 @@ This week's one-liner: **"Bring intent, leave infra behind."**
     ],
   },
   {
-    id: "ai-shorts",
+    id: "ai-shorts-factory",
     company: "Shorts Factory",
     emoji: "🎬",
     oneLiner: "AI shorts / reels production",
