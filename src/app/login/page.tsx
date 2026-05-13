@@ -35,7 +35,7 @@ function LoginForm() {
       const result = await signIn("email", {
         email,
         redirect: false,
-        callbackUrl: "/dashboard",
+        callbackUrl: "/account",
       });
 
       if (result?.error) {

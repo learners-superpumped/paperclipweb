@@ -52,8 +52,8 @@ export async function POST(req: Request) {
         customer: customerId,
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appUrl}/dashboard/billing?success=true`,
-        cancel_url: `${appUrl}/dashboard/billing?canceled=true`,
+        success_url: `${appUrl}/account?success=true`,
+        cancel_url: `${appUrl}/account?canceled=true`,
         metadata: {
           userId: user.id,
           plan: parsed.data.plan,
@@ -85,8 +85,8 @@ export async function POST(req: Request) {
             quantity: 1,
           },
         ],
-        success_url: `${appUrl}/dashboard/billing?success=true&topup=${parsed.data.topup}`,
-        cancel_url: `${appUrl}/dashboard/billing?canceled=true`,
+        success_url: `${appUrl}/account?success=true&topup=${parsed.data.topup}`,
+        cancel_url: `${appUrl}/account?canceled=true`,
         metadata: {
           userId: user.id,
           type: "topup",

@@ -39,10 +39,10 @@ export default async function CheckoutCancelPage({
             Try again →
           </Link>
           <Link
-            href="/dashboard"
+            href="/account"
             className="inline-block rounded-md border border-gray-300 px-5 py-2.5 text-gray-700 text-sm font-medium hover:bg-gray-50"
           >
-            Back to dashboard
+            Back to account
           </Link>
         </div>
       </div>

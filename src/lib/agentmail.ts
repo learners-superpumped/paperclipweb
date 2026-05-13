@@ -206,20 +206,21 @@ export async function sendMonthlySummaryEmail(to: string, stats: {
 }
 
 export async function sendWelcomeEmail(to: string, name?: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
   return sendEmail({
     to,
-    subject: "Welcome to paperclipweb!",
+    subject: "Welcome to paperclip",
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
-        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Welcome to paperclipweb${name ? `, ${name}` : ""}!</h2>
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Welcome to paperclip${name ? `, ${name}` : ""}!</h2>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
-          You now have <strong>100 free agent action credits</strong> to get started.
+          Pick a proven AI company template, pay $29, and your company is live — with <strong>$9 LLM credit</strong> included to run your first tasks.
         </p>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-          Create your first Paperclip instance and start running AI agents in under 60 seconds.
+          One bill. Zero installs. Your AI company is ready before you open the door.
         </p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app"}/dashboard" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Go to Dashboard
+        <a href="${appUrl}" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+          Choose a company template
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px;">
           One bill. One click. Your AI company.

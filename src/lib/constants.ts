@@ -49,7 +49,5 @@ export const TOPUP_PACKAGES = [
 ] as const;
 
 export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Companies" },
-  { href: "/dashboard/billing", label: "Billing" },
-  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/account", label: "Account" },
 ] as const;

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing — Bundled AI credits + managed Paperclip hosting",
   description:
-    "Simple, transparent pricing for paperclipweb. Free tier with 100 agent actions, Starter at $19/mo for 1,000 actions, Pro at $49/mo for 3,000 actions. Anthropic and OpenAI credits included.",
+    "Simple, transparent pricing for paperclip. Pro at $29/mo includes $9 LLM credit, 1 AI company instance, and email balance alerts. Top up $10 for $4.50 additional LLM credit.",
   alternates: {
     canonical: "/pricing",
   },

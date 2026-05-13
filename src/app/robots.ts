@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
-          "/dashboard/",
+          "/account",
           "/onboarding/redirect",
           "/login",
           "/signup",
@@ -20,12 +20,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: ["/api/", "/dashboard/", "/onboarding/redirect"],
+        disallow: ["/api/", "/account", "/onboarding/redirect"],
       },
       {
         userAgent: "Bingbot",
         allow: "/",
-        disallow: ["/api/", "/dashboard/", "/onboarding/redirect"],
+        disallow: ["/api/", "/account", "/onboarding/redirect"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

@@ -196,7 +196,7 @@ export function InstanceShell({
       <header className="border-b border-secondary-200 bg-white">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <Link
-            href="/dashboard"
+            href="/account"
             className="text-sm font-semibold text-secondary-800"
           >
             paperclip · {visibleCompanyName}

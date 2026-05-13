@@ -27,7 +27,7 @@ export default function CheckoutSuccessClient() {
               if (slug) {
                 router.push(`/i/${slug}?just_paid=1`);
               } else {
-                router.push(caseId ? `/dashboard?caseId=${caseId}` : "/dashboard");
+                router.push(caseId ? `/account?caseId=${caseId}` : "/account");
               }
             }, 1500);
             return true;
@@ -95,7 +95,7 @@ export default function CheckoutSuccessClient() {
               you can continue from the dashboard.
             </p>
             <a
-              href="/dashboard"
+              href="/account"
               className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-white text-sm font-medium hover:bg-indigo-700"
             >
               Go to dashboard →

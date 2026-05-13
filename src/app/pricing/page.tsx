@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Check, Paperclip, Loader2 } from "lucide-react";
@@ -14,8 +12,6 @@ import {
 } from "@/lib/analytics";
 
 export default function PricingPage() {
-  const { status } = useSession();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,17 +20,13 @@ export default function PricingPage() {
 
   const startCheckout = async () => {
     trackPlanSelected("pro", "pricing");
-    if (status !== "authenticated") {
-      router.push("/signup");
-      return;
-    }
     setLoading(true);
     trackCheckoutStarted("pro", PLANS.pro.price);
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch("/api/checkout/public", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "pro" }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (data.url) {
@@ -129,7 +121,7 @@ export default function PricingPage() {
                 ${TOPUP.price}
               </span>
               <span className="text-base text-secondary-700">
-                / {TOPUP.credits} actions
+                / $4.50 LLM credit
               </span>
             </div>
             <p className="mt-2 text-sm text-secondary-700">
@@ -142,7 +134,7 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-10 text-center text-sm text-secondary-700">
-          No free plan. One free mock onboarding → if it clicks, pay $29.
+          No free plan. Pick a template, pay $29, company is live instantly.
         </p>
       </div>
     </div>
