@@ -64,8 +64,8 @@ export async function POST() {
     payment_method_types: ["card"],
     customer_email: email,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${base}/dashboard?topup=success`,
-    cancel_url: `${base}/dashboard?topup=cancelled`,
+    success_url: `${base}/account?topup=success`,
+    cancel_url: `${base}/account`,
     metadata: {
       userId: user.id,
       type: "topup",

@@ -360,7 +360,7 @@ export async function GET(req: NextRequest) {
               name: companyName,
               slug,
               caseId: resolvedCaseId || undefined,
-              mockMode: false,
+              legacyMode: false,
               status: "running",
             }).onConflictDoNothing();
           }
@@ -442,7 +442,7 @@ export async function GET(req: NextRequest) {
             caseId: resolvedCaseId || undefined,
             paperclipCompanyId,
             instanceUrl,
-            mockMode: false,
+            legacyMode: false,
             status: paperclipCompanyId ? "running" : "provisioning",
           }).onConflictDoNothing();
         }

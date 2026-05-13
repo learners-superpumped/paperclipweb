@@ -4,7 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { companies, tasks, users, creditTransactions } from "@/db/schema";
+import { companies, tasks, users, creditTransactions, balances } from "@/db/schema";
 import { sendEmail, sendCreditLowEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
 
@@ -211,9 +211,15 @@ export async function POST(req: Request) {
     .limit(1);
   if (!user) return NextResponse.json({ error: "no_user" }, { status: 404 });
 
-  if (user.creditsBalance <= 0) {
+  // B.9.F4: check dollar balance from balances table (not integer creditsBalance)
+  const [dollarBalance] = await db()
+    .select()
+    .from(balances)
+    .where(eq(balances.userId, user.id))
+    .limit(1);
+  if (!dollarBalance || parseFloat(dollarBalance.dollars) <= 0) {
     return NextResponse.json(
-      { error: "credits_zero", message: "Balance is 0. Top up and try again." },
+      { error: "credits_zero", message: "Balance is $0.00. Top up and try again." },
       { status: 402 },
     );
   }

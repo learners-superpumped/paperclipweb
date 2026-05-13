@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
 import { users, subscriptions, invoices, companies, stripeEvents, balances, balanceMovements, creditTransactions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
 import {
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
           const planCredits = PLAN_CREDITS[plan] ?? PLAN_CREDITS.free;
           const price = PLAN_PRICES[plan] ?? 0;
 
-          // Atomically create subscription + update user + record credit transaction
+          // Atomically create subscription + update user + record credit transaction + grant $9 LLM balance
           await db().transaction(async (tx) => {
             await tx.insert(subscriptions).values({
               userId,
@@ -121,6 +121,15 @@ export async function POST(req: Request) {
               amount: planCredits.balance,
               type: "subscription",
               description: `${plan} plan activated - ${planCredits.balance} credits`,
+            });
+
+            // B.1.I3: grant $9 LLM dollar balance atomically with subscription creation
+            await tx.insert(balances).values({ userId, dollars: "9.0000" }).onConflictDoNothing();
+            await tx.insert(balanceMovements).values({
+              userId,
+              kind: "grant",
+              dollarsDelta: "9.0000",
+              reference: session.id,
             });
           });
 
@@ -176,7 +185,7 @@ export async function POST(req: Request) {
               caseId: sessionCaseId || undefined,
               paperclipCompanyId,
               instanceUrl,
-              mockMode: false,
+              legacyMode: false,
               status: paperclipCompanyId ? "running" : "provisioning",
             });
           } catch (err) {
@@ -195,18 +204,17 @@ export async function POST(req: Request) {
             description: `Top-up ${topupPackage}: +${credits} credits`,
           });
 
-          // Add dollar balance for LLM usage
+          // Add dollar balance for LLM usage (B.5.I4: use proper Drizzle sql template)
           await db()
             .insert(balances)
             .values({ userId, dollars: topupDollars })
-            .onConflictDoNothing();
-          await db()
-            .update(balances)
-            .set({
-              dollars: `(SELECT dollars + ${topupDollars} FROM paperclipweb.balances WHERE user_id = '${userId}')`,
-              updatedAt: new Date(),
-            })
-            .where(eq(balances.userId, userId));
+            .onConflictDoUpdate({
+              target: balances.userId,
+              set: {
+                dollars: sql`${balances.dollars} + ${topupDollars}`,
+                updatedAt: new Date(),
+              },
+            });
           await db().insert(balanceMovements).values({
             userId,
             kind: "topup",

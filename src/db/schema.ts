@@ -108,7 +108,7 @@ export const companies = paperclipwebSchema.table(
     status: text("status").notNull().default("provisioning"), // provisioning, running, stopped, archived, deleted, error
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     deleteAfter: timestamp("delete_after", { withTimezone: true }),
-    mockMode: boolean("mock_mode").notNull().default(true),
+    legacyMode: boolean("mock_mode").notNull().default(false),
     paperclipCompanyId: text("paperclip_company_id"),
     paperclipVersion: text("paperclip_version").default("latest"),
     instanceUrl: text("instance_url"),
@@ -197,9 +197,8 @@ export const signupIntents = paperclipwebSchema.table("signup_intents", {
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 });
 
-// ─── Mock Companies (결제 전 온보딩 결과) ───
-// mock 단계의 회사·CTO·첫 task 결과. 결제 후 진짜 인스턴스로 이관.
-export const mockCompanies = paperclipwebSchema.table("mock_companies", {
+// ─── Legacy Onboarding (pre-payment onboarding data, no longer written to) ───
+export const legacyOnboarding = paperclipwebSchema.table("legacy_onboarding", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   caseId: text("case_id").notNull(),

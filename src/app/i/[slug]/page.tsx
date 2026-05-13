@@ -37,7 +37,7 @@ export default async function InstancePage({
   // spec 13.F2 강제: 진짜 인스턴스 활성화된 사용자는 paperclip 의 진짜 UI 로 즉시 redirect.
   // 단 instanceUrl 이 절대 URL (paperclip engine) 인 경우만 — `/i/<slug>` 같은
   // paperclipweb 자체 path 면 무한 redirect 발생하므로 자체 InstanceShell 노출.
-  if (!company.mockMode && company.instanceUrl?.startsWith("http")) {
+  if (!company.legacyMode && company.instanceUrl?.startsWith("http")) {
     redirect(company.instanceUrl);
   }
 
@@ -65,7 +65,7 @@ export default async function InstancePage({
         slug: company.slug ?? slug,
         caseId: company.caseId ?? null,
         employees,
-        mockMode: company.mockMode,
+        legacyMode: company.legacyMode,
       }}
       tasks={taskRows.map((t) => ({
         id: t.id,

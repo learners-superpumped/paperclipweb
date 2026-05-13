@@ -58,7 +58,7 @@ export function InstanceShell({
     slug: string;
     caseId: string | null;
     employees: Array<{ role: string; name: string; bio: string }>;
-    mockMode: boolean;
+    legacyMode: boolean;
   };
   tasks: TaskRow[];
   user: { name: string | null; creditsBalance: number; creditsLimit: number };
@@ -202,12 +202,6 @@ export function InstanceShell({
             paperclip · {visibleCompanyName}
           </Link>
           <div className="flex items-center gap-4 text-xs">
-            <div
-              className="text-secondary-800 font-medium"
-              data-testid="credits-balance"
-            >
-              Credits {credits.balance} / {credits.limit}
-            </div>
             <button
               type="button"
               className="text-primary hover:underline"
@@ -250,9 +244,9 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm"
           data-testid="low-balance-banner"
         >
-          {credits.balance} actions left. Top up before you run out —{" "}
-          <Link href="/dashboard/billing" className="underline">
-            $10 buys 50 actions
+          Running low — top up to keep your company working.{" "}
+          <Link href="/account" className="underline">
+            Top up $10
           </Link>
           .
         </div>
@@ -263,9 +257,9 @@ export function InstanceShell({
           className="mx-auto max-w-3xl mt-4 rounded-xl border border-destructive/40 bg-destructive-50 text-destructive p-3 text-sm"
           data-testid="zero-balance-banner"
         >
-          Balance is 0. To run a new task, you'll need to{" "}
-          <Link href="/dashboard/billing" className="underline">
-            top up $10 for 50 actions
+          Balance is empty — top up to run new tasks.{" "}
+          <Link href="/account" className="underline">
+            Top up $10
           </Link>
           .
         </div>
@@ -283,7 +277,7 @@ export function InstanceShell({
                   Top up credits
                 </h2>
                 <p className="mt-1 text-sm text-secondary-700">
-                  ${TOPUP.price} / {TOPUP.credits} actions. Applied instantly to this account.
+                  ${TOPUP.price} / $4.50 LLM credit. Applied instantly to this account.
                 </p>
               </div>
               <div className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary">
@@ -330,7 +324,7 @@ export function InstanceShell({
             {topupSuccess && (
               <div className="mt-3 flex items-center gap-2 text-sm text-accent" data-testid="topup-success">
                 <Check className="h-4 w-4" />
-                Top up complete. Credits are now {credits.balance} / {credits.limit}.
+                Top up complete. Your balance has been updated.
               </div>
             )}
           </section>
@@ -355,7 +349,7 @@ export function InstanceShell({
           </div>
           <p className="mt-3 text-xs text-secondary-700">
             Instance path: <code>/i/{company.slug}</code>{" "}
-            {company.mockMode ? "(mock mode — will switch to a real sub-domain at launch)" : ""}
+            {company.legacyMode ? "(legacy mode)" : ""}
           </p>
         </section>
 
@@ -460,7 +454,7 @@ export function InstanceShell({
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  Run task (1 action)
+                  Run task
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

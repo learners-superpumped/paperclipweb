@@ -57,7 +57,7 @@ export async function createCompany(data: {
   caseId?: string;
   paperclipCompanyId?: string;
   instanceUrl?: string;
-  mockMode?: boolean;
+  legacyMode?: boolean;
   status?: string;
 }) {
   const result = await db()
@@ -69,7 +69,7 @@ export async function createCompany(data: {
       caseId: data.caseId,
       paperclipCompanyId: data.paperclipCompanyId,
       instanceUrl: data.instanceUrl,
-      mockMode: data.mockMode ?? false,
+      legacyMode: data.legacyMode ?? false,
       status: data.status ?? "provisioning",
     })
     .returning();

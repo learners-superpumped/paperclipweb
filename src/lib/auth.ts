@@ -48,7 +48,7 @@ const authConfig: NextAuthConfig = {
   },
   pages: {
     signIn: "/login",
-    newUser: "/onboarding/redirect",
+    newUser: "/account",
     verifyRequest: "/login",
   },
   providers: [
@@ -103,8 +103,10 @@ const authConfig: NextAuthConfig = {
     },
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isOnDashboard = request.nextUrl.pathname.startsWith("/dashboard");
-      if (isOnDashboard) {
+      const isProtected =
+        request.nextUrl.pathname.startsWith("/account") ||
+        request.nextUrl.pathname.startsWith("/dashboard");
+      if (isProtected) {
         return isLoggedIn;
       }
       return true;
