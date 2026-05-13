@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         }
 
         // ── Mock payment session (PAPERCLIP_PAYMENT_MOCK=true) ──────────────────
-        if (sessionId.startsWith("mock_") && process.env.PAPERCLIP_PAYMENT_MOCK === "true") {
+        if (sessionId.startsWith("mock_") && (process.env.PAPERCLIP_PAYMENT_MOCK === "true" || process.env.STRIPE_TEST_MODE === "true")) {
           const slug = sessionId.slice(5);
 
           const [mockCompanyRow] = await db()
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
           // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
-            const found = await pollForFirstWorkProduct(paperclipCompanyId, 6000);
+            const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
             if (found) mockFirstHeartbeatAt = new Date();
           }
 
@@ -422,7 +422,7 @@ export async function GET(req: NextRequest) {
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
-          const found = await pollForFirstWorkProduct(paperclipCompanyId, 6000);
+          const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
           if (found) firstHeartbeatAt = new Date();
         }
 
