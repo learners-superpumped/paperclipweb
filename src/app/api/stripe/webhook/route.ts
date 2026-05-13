@@ -87,7 +87,77 @@ export async function POST(req: Request) {
         const topupCredits = session.metadata?.credits;
         const topupPrice = session.metadata?.price;
 
-        if (!userId) break;
+        if (!userId) {
+          // Public checkout (landing page) — no userId in metadata.
+          // Atomically upsert user + subscription + balance + company stub so that
+          // B.1.I3 is satisfied even if the user never visits /provisioning.
+          const customerEmail = session.customer_details?.email;
+          if (!customerEmail) break;
+
+          const pubSubId = typeof session.subscription === "string"
+            ? session.subscription
+            : (session.subscription as { id?: string } | null)?.id ?? null;
+          const pubCaseId = session.metadata?.caseId ?? "";
+          const pubPlanCredits = PLAN_CREDITS["pro"] ?? PLAN_CREDITS.free;
+
+          let pubCompanyName = "My AI Company";
+          if (pubCaseId) {
+            const tmpl = findCase(pubCaseId);
+            if (tmpl?.company) pubCompanyName = tmpl.company;
+          }
+          const pubSlug = makeWebhookSlug(pubCompanyName);
+
+          await db().transaction(async (tx) => {
+            // Upsert user
+            const [existingUserRow] = await tx.select({ id: users.id }).from(users).where(eq(users.email, customerEmail)).limit(1);
+            let resolvedUserId: string;
+            if (existingUserRow) {
+              resolvedUserId = existingUserRow.id;
+              await tx.update(users).set({
+                plan: "pro",
+                creditsBalance: pubPlanCredits.balance,
+                creditsLimit: pubPlanCredits.limit,
+                stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
+                updatedAt: new Date(),
+              }).where(eq(users.id, existingUserRow.id));
+            } else {
+              const [newUser] = await tx.insert(users).values({
+                email: customerEmail,
+                plan: "pro",
+                stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
+                creditsBalance: pubPlanCredits.balance,
+                creditsLimit: pubPlanCredits.limit,
+              }).returning();
+              resolvedUserId = newUser.id;
+            }
+
+            if (pubSubId) {
+              await tx.insert(subscriptions).values({
+                userId: resolvedUserId,
+                stripeSubscriptionId: pubSubId,
+                plan: "pro",
+                status: "active",
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              }).onConflictDoNothing();
+            }
+
+            // Grant $9 LLM credit balance (idempotent — provisioning stream may also do this)
+            await tx.insert(balances).values({ userId: resolvedUserId, dollars: "9.0000" }).onConflictDoNothing();
+
+            // Company stub — provisioning stream will update with paperclipCompanyId/instanceUrl
+            await tx.insert(companies).values({
+              userId: resolvedUserId,
+              name: pubCompanyName,
+              slug: pubSlug,
+              caseId: pubCaseId || undefined,
+              legacyMode: false,
+              status: "provisioning",
+            }).onConflictDoNothing();
+          });
+
+          break;
+        }
 
         if (plan && session.subscription) {
           // Subscription checkout completed

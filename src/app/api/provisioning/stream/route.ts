@@ -80,12 +80,8 @@ export async function GET(req: NextRequest) {
 
           const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
 
-          // Already provisioned — fast-confirm all 4 steps then redirect.
+          // Already provisioned — redirect immediately without re-running steps.
           if (mockCompanyRow.paperclipCompanyId) {
-            send({ step: "import", label: "Importing company template…" });
-            send({ step: "approve", label: "Approving CEO and team…" });
-            send({ step: "heartbeat", label: "Firing first heartbeat…" });
-            send({ step: "invite", label: "Sending you the keys…" });
             const redirectUrl = mockCompanyRow.instanceUrl?.startsWith("http")
               ? mockCompanyRow.instanceUrl
               : `${BASE_URL}/account`;
@@ -135,7 +131,7 @@ export async function GET(req: NextRequest) {
           // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
-            const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
+            const found = await pollForFirstWorkProduct(paperclipCompanyId, 6000);
             if (found) mockFirstHeartbeatAt = new Date();
           }
 
@@ -390,12 +386,12 @@ export async function GET(req: NextRequest) {
           : "";
 
         const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-        if (!rawTemplateRef) {
-          console.error("[Provisioning] PAPERCLIP_TEMPLATE_REF is not set — falling back to 'main'. Set this to a pinned commit SHA to prevent template drift.");
-        } else if (!/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
-          console.warn(`[Provisioning] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef}' is not a 40-char SHA. Template drift risk: any push to this ref changes what subscribers receive.`);
+        if (!rawTemplateRef || !/^[0-9a-f]{40}$/i.test(rawTemplateRef)) {
+          throw new Error(
+            `[Provisioning] PAPERCLIP_TEMPLATE_REF must be a 40-char commit SHA (got: '${rawTemplateRef ?? ""}').`
+          );
         }
-        const templateRef = rawTemplateRef ?? "main";
+        const templateRef = rawTemplateRef;
 
         // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
         // Keep clean companyName for DB storage.
@@ -422,7 +418,7 @@ export async function GET(req: NextRequest) {
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
-          const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
+          const found = await pollForFirstWorkProduct(paperclipCompanyId, 6000);
           if (found) firstHeartbeatAt = new Date();
         }
 
@@ -433,22 +429,22 @@ export async function GET(req: NextRequest) {
           if (invite?.url) instanceUrl = invite.url;
         }
 
-        // Persist company record
+        // Persist company record — update stub (from webhook) or insert fresh row
         const slug = makeSlug(companyName);
-        if (alreadyProvisioned && existingCompanies[0]) {
-          if (paperclipCompanyId) {
-            await db()
-              .update(companies)
-              .set({
-                paperclipCompanyId,
-                instanceUrl,
-                paperclipVersion: templateRef,
-                ...(firstHeartbeatAt ? { firstHeartbeatAt } : {}),
-                status: "running",
-                updatedAt: new Date(),
-              })
-              .where(eq(companies.id, existingCompanies[0].id));
-          }
+        if (existingCompanies[0]) {
+          await db()
+            .update(companies)
+            .set({
+              name: companyName,
+              caseId: resolvedCaseId || existingCompanies[0].caseId || undefined,
+              ...(paperclipCompanyId ? { paperclipCompanyId } : {}),
+              ...(instanceUrl ? { instanceUrl } : {}),
+              paperclipVersion: templateRef,
+              ...(firstHeartbeatAt ? { firstHeartbeatAt } : {}),
+              status: paperclipCompanyId ? "running" : existingCompanies[0].status,
+              updatedAt: new Date(),
+            })
+            .where(eq(companies.id, existingCompanies[0].id));
         } else {
           await db().insert(companies).values({
             userId,
