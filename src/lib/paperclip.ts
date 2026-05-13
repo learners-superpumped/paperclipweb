@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { findCase } from "@/lib/cases";
 
 // ─── Configuration ───
 
@@ -191,12 +192,13 @@ export async function createCompanyInvite(
       console.error("[Paperclip] Create invite failed:", res.status, await res.text().catch(() => ""));
       return null;
     }
-    const data = (await res.json()) as { token?: string; expiresAt?: string };
+    const data = (await res.json()) as { token?: string; inviteUrl?: string; expiresAt?: string };
     if (!data.token) return null;
     const baseUrl = PAPERCLIP_API_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+    const url = data.inviteUrl ?? `${baseUrl}/invite/${data.token}`;
     return {
       token: data.token,
-      url: `${baseUrl}/invite/${data.token}`,
+      url,
       expiresAt: data.expiresAt ?? "",
     };
   } catch (err) {
@@ -314,54 +316,47 @@ function buildImportBody(githubUrl: string, companyName: string) {
   };
 }
 
-/**
- * Import a company from a template repository.
- * Falls back to createPaperclipCompany if import API fails.
- */
-export async function importPaperclipCompany(
-  templateSource: string,
-  ref: string,
-  companyName: string
+function slugifyRole(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function buildInlineImportFiles(caseId: string, companyName: string): Record<string, string> {
+  const tmpl = findCase(caseId);
+  const companyMd = tmpl
+    ? `# ${companyName}\n\n${tmpl.mission}\n\n## About\n${tmpl.oneLiner}\n`
+    : `# ${companyName}\n\nAI-powered company managed by paperclipweb.\n`;
+  const files: Record<string, string> = { "COMPANY.md": companyMd };
+  const employees = tmpl?.employees ?? [{ role: "CEO", name: "Alex", bio: "CEO of the company." }];
+  for (const emp of employees) {
+    const slug = slugifyRole(emp.role);
+    files[`agents/${slug}/AGENTS.md`] = `# ${emp.name} — ${emp.role}\n\n${emp.bio}\n`;
+  }
+  return files;
+}
+
+async function inlineImportPaperclipCompany(
+  companyName: string,
+  caseId: string
 ): Promise<PaperclipCompany | null> {
   try {
-    let githubUrl: string;
-    try {
-      githubUrl = buildGithubTreeUrl(templateSource, ref);
-    } catch (err) {
-      console.error("[Paperclip] buildGithubTreeUrl failed:", err);
-      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
-    }
-
-    const body = buildImportBody(githubUrl, companyName);
-    const bodyJson = JSON.stringify(body);
-
-    const previewRes = await paperclipFetch("/api/companies/import/preview", {
-      method: "POST",
-      body: bodyJson,
-    });
-    if (!previewRes.ok) {
-      const errText = await previewRes.text().catch(() => "");
-      console.warn(
-        `[Paperclip] Import preview failed (${previewRes.status}): ${errText.slice(0, 300)} — falling back to createPaperclipCompany`
-      );
-      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
-    }
-
+    const files = buildInlineImportFiles(caseId, companyName);
+    const body = {
+      source: { type: "inline" as const, files },
+      target: { mode: "new_company" as const, newCompanyName: companyName },
+      include: { company: true, agents: true, projects: true, issues: true, skills: true },
+      agents: "all" as const,
+      collisionStrategy: "rename" as const,
+    };
     const importRes = await paperclipFetch("/api/companies/import", {
       method: "POST",
-      body: bodyJson,
+      body: JSON.stringify(body),
     });
     if (!importRes.ok) {
       const errText = await importRes.text().catch(() => "");
-      console.warn(
-        `[Paperclip] Import failed (${importRes.status}): ${errText.slice(0, 300)} — falling back to createPaperclipCompany`
-      );
-      return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+      console.error(`[Paperclip] Inline import failed (${importRes.status}): ${errText.slice(0, 300)}`);
+      return null;
     }
-
     const data = await importRes.json();
-    // paperclip's applyImport returns an ImportResult shape. The created company can
-    // surface either at the top level or nested. Try common shapes before falling back.
     const candidate =
       (data && typeof data === "object" && (data as Record<string, unknown>).company) ||
       (data && typeof data === "object" && (data as Record<string, unknown>).createdCompany) ||
@@ -371,13 +366,80 @@ export async function importPaperclipCompany(
     if (candidate && typeof (candidate as Record<string, unknown>).id === "string") {
       return candidate as PaperclipCompany;
     }
-    console.warn(
-      "[Paperclip] Import succeeded but response shape unrecognized; falling back to createPaperclipCompany"
-    );
-    return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    return null;
+  } catch (err) {
+    console.error("[Paperclip] inlineImportPaperclipCompany error:", err);
+    return null;
+  }
+}
+
+/**
+ * Import a company from a template repository.
+ * Falls back to inline import if GitHub import fails.
+ */
+export async function importPaperclipCompany(
+  templateSource: string,
+  ref: string,
+  companyName: string
+): Promise<PaperclipCompany | null> {
+  // Extract caseId from templateSource: "owner/repo/caseId"
+  const caseId = templateSource ? (templateSource.split("/").pop() ?? "") : "";
+
+  try {
+    if (templateSource) {
+      let githubUrl: string;
+      try {
+        githubUrl = buildGithubTreeUrl(templateSource, ref);
+      } catch (err) {
+        console.error("[Paperclip] buildGithubTreeUrl failed:", err);
+        return inlineImportPaperclipCompany(companyName, caseId);
+      }
+
+      const body = buildImportBody(githubUrl, companyName);
+      const bodyJson = JSON.stringify(body);
+
+      const previewRes = await paperclipFetch("/api/companies/import/preview", {
+        method: "POST",
+        body: bodyJson,
+      });
+      if (!previewRes.ok) {
+        const errText = await previewRes.text().catch(() => "");
+        console.warn(
+          `[Paperclip] Import preview failed (${previewRes.status}): ${errText.slice(0, 300)} — falling back to inline import`
+        );
+        return inlineImportPaperclipCompany(companyName, caseId);
+      }
+
+      const importRes = await paperclipFetch("/api/companies/import", {
+        method: "POST",
+        body: bodyJson,
+      });
+      if (!importRes.ok) {
+        const errText = await importRes.text().catch(() => "");
+        console.warn(
+          `[Paperclip] Import failed (${importRes.status}): ${errText.slice(0, 300)} — falling back to inline import`
+        );
+        return inlineImportPaperclipCompany(companyName, caseId);
+      }
+
+      const data = await importRes.json();
+      const candidate =
+        (data && typeof data === "object" && (data as Record<string, unknown>).company) ||
+        (data && typeof data === "object" && (data as Record<string, unknown>).createdCompany) ||
+        data;
+      const parsed = PaperclipCompanySchema.safeParse(candidate);
+      if (parsed.success) return parsed.data;
+      if (candidate && typeof (candidate as Record<string, unknown>).id === "string") {
+        return candidate as PaperclipCompany;
+      }
+      console.warn("[Paperclip] Import succeeded but response shape unrecognized; falling back to inline import");
+      return inlineImportPaperclipCompany(companyName, caseId);
+    }
+
+    return inlineImportPaperclipCompany(companyName, caseId);
   } catch (err) {
     console.error("[Paperclip] importPaperclipCompany error:", err);
-    return createPaperclipCompany(companyName, `paperclipweb subscriber instance`);
+    return inlineImportPaperclipCompany(companyName, caseId);
   }
 }
 

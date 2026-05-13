@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { getUserCredits, addCreditTransaction } from "@/lib/queries";
+import { addCreditTransaction } from "@/lib/queries";
 import { trackServerCreditsUsed } from "@/lib/analytics-server";
 
 const AIRequestSchema = z.object({
@@ -125,19 +125,6 @@ export async function POST(req: Request) {
     }
 
     const { model, messages, instance_id } = parsed.data;
-
-    // Check credit balance
-    const credits = await getUserCredits(user.id);
-    if (credits.balance < 1) {
-      return NextResponse.json(
-        {
-          error: "Insufficient credits",
-          credits_balance: credits.balance,
-          plan: credits.plan,
-        },
-        { status: 402 }
-      );
-    }
 
     // Determine provider and call appropriate API
     const provider = getProviderFromModel(model);

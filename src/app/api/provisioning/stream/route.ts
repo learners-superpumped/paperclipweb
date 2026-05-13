@@ -112,10 +112,12 @@ export async function GET(req: NextRequest) {
             }
             const templateRef = rawTemplateRef ?? "main";
 
-            const pcCompany = await importPaperclipCompany(templateSource, templateRef, companyName);
+            const mockRand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
+            const mockPaperclipCompanyName = `${mockRand3} · ${companyName}`;
+
+            const pcCompany = await importPaperclipCompany(templateSource, templateRef, mockPaperclipCompanyName);
             if (pcCompany?.id) {
               paperclipCompanyId = pcCompany.id;
-              if (pcCompany.name) companyName = pcCompany.name;
             }
           }
 
@@ -388,13 +390,16 @@ export async function GET(req: NextRequest) {
           console.warn(`[Provisioning] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef}' is not a 40-char SHA. Template drift risk: any push to this ref changes what subscribers receive.`);
         }
         const templateRef = rawTemplateRef ?? "main";
-        const pcCompany = templateSource
-          ? await importPaperclipCompany(templateSource, templateRef, companyName)
-          : await importPaperclipCompany("", templateRef, companyName);
+
+        // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
+        // Keep clean companyName for DB storage.
+        const rand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
+        const paperclipCompanyName = `${rand3} · ${companyName}`;
+
+        const pcCompany = await importPaperclipCompany(templateSource || "", templateRef, paperclipCompanyName);
 
         if (pcCompany?.id) {
           paperclipCompanyId = pcCompany.id;
-          if (pcCompany.name) companyName = pcCompany.name;
         }
 
         // Step 2: Approve agents

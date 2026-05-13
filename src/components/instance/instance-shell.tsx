@@ -71,10 +71,6 @@ export function InstanceShell({
   const [employeeName, setEmployeeName] = useState("");
   const [employeeRole, setEmployeeRole] = useState("");
   const [taskRows, setTaskRows] = useState(tasks);
-  const [credits, setCredits] = useState({
-    balance: user.creditsBalance,
-    limit: user.creditsLimit,
-  });
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPrompt, setTaskPrompt] = useState("");
   const [running, setRunning] = useState(false);
@@ -116,12 +112,6 @@ export function InstanceShell({
       }
       if (data.task) {
         setTaskRows((current) => [data.task as TaskRow, ...current]);
-      }
-      if (typeof data.creditsBalance === "number") {
-        setCredits({
-          balance: data.creditsBalance,
-          limit: data.creditsLimit ?? credits.limit,
-        });
       }
       setTaskTitle("");
       setTaskPrompt("");
@@ -174,10 +164,6 @@ export function InstanceShell({
         setTopupLoading(false);
         return;
       }
-      setCredits({
-        balance: data.creditsBalance ?? credits.balance + TOPUP.credits,
-        limit: data.creditsLimit ?? credits.limit + TOPUP.credits,
-      });
       setTopupSuccess(true);
       setTopupCard("");
       router.refresh();
@@ -187,9 +173,6 @@ export function InstanceShell({
       setTopupLoading(false);
     }
   };
-
-  const lowBalance = credits.balance <= 20;
-  const zeroBalance = credits.balance <= 0;
 
   return (
     <div className="min-h-screen bg-secondary-50/40">
@@ -236,32 +219,6 @@ export function InstanceShell({
           <p className="mt-1 text-sm text-indigo-800">
             The mock run showed you the format. Now type any task below — Claude Opus will actually do it for your company.
           </p>
-        </div>
-      )}
-
-      {lowBalance && !zeroBalance && (
-        <div
-          className="mx-auto max-w-3xl mt-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm"
-          data-testid="low-balance-banner"
-        >
-          Running low — top up to keep your company working.{" "}
-          <Link href="/account" className="underline">
-            Top up $10
-          </Link>
-          .
-        </div>
-      )}
-
-      {zeroBalance && (
-        <div
-          className="mx-auto max-w-3xl mt-4 rounded-xl border border-destructive/40 bg-destructive-50 text-destructive p-3 text-sm"
-          data-testid="zero-balance-banner"
-        >
-          Balance is empty — top up to run new tasks.{" "}
-          <Link href="/account" className="underline">
-            Top up $10
-          </Link>
-          .
         </div>
       )}
 
@@ -447,7 +404,7 @@ export function InstanceShell({
             <Button
               type="submit"
               className="gap-2"
-              disabled={running || zeroBalance}
+              disabled={running}
               data-testid="run-task-btn"
             >
               {running ? (

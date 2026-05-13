@@ -78,8 +78,8 @@ export const CASES: CaseTemplate[] = [
 🍰 Dark chocolate ganache that melts in one bite. Our new signature dessert just dropped — perfect pairing for a deeper cup. #SignatureDessert #ChocolateCake #DessertCafé #NewMenu #SweetAfternoon`,
     },
     youtube: [
-      { title: "Solo creator hits $5k/mo with AI on Instagram", url: "https://www.youtube.com/results?search_query=ai+instagram+influencer+automation+revenue" },
-      { title: "How 1-person studios run AI staff", url: "https://www.youtube.com/results?search_query=ai+influencer+studio+how+to" },
+      { title: "Solo creator hits $5k/mo with AI on Instagram", url: "https://www.youtube.com/watch?v=T5dRN2zMogc" },
+      { title: "How 1-person studios run AI staff", url: "https://www.youtube.com/watch?v=g7l5Fath6Rg" },
     ],
   },
   {
@@ -123,8 +123,8 @@ A 15-minute Sunday-evening retrospective. Just three columns — "what went well
 **Meta description**: Hand-picked Notion templates for beginners with real-world notes — daily tracker, weekly review, reading log, and more.`,
     },
     youtube: [
-      { title: "AI blog hitting $2k/mo (real case)", url: "https://www.youtube.com/results?search_query=ai+seo+blog+passive+income" },
-      { title: "Automating an SEO blog step-by-step", url: "https://www.youtube.com/results?search_query=ai+seo+blog+automation+step+by+step" },
+      { title: "AI blog hitting $2k/mo (real case)", url: "https://www.youtube.com/watch?v=_D7pW_8hm5I" },
+      { title: "Automating an SEO blog step-by-step", url: "https://www.youtube.com/watch?v=rWpbWkMn5Xg" },
     ],
   },
   {
@@ -168,8 +168,8 @@ This week's one-liner: **"Bring intent, leave infra behind."**
 [👉 Read the full issue / Inquire about ads]`,
     },
     youtube: [
-      { title: "10k subs → $1.5k/mo newsletter", url: "https://www.youtube.com/results?search_query=newsletter+monetization+10k+subscribers" },
-      { title: "Automating a 2x/week newsletter with AI", url: "https://www.youtube.com/results?search_query=ai+newsletter+automation" },
+      { title: "10k subs → $1.5k/mo newsletter", url: "https://www.youtube.com/watch?v=-wBVl0TtiOw" },
+      { title: "Automating a 2x/week newsletter with AI", url: "https://www.youtube.com/watch?v=aT2XgPDU6yY" },
     ],
   },
   {
@@ -214,8 +214,8 @@ This week's one-liner: **"Bring intent, leave infra behind."**
 [CTA] "Try one line today. Drop it in the comments and I'll reply."`,
     },
     youtube: [
-      { title: "Shorts automation grew this channel to 100k", url: "https://www.youtube.com/results?search_query=ai+shorts+automation+channel+growth" },
-      { title: "Make 3 AI shorts every day", url: "https://www.youtube.com/results?search_query=ai+shorts+automation+daily" },
+      { title: "Shorts automation grew this channel to 100k", url: "https://www.youtube.com/watch?v=ygeCgN-SfE8" },
+      { title: "Make 3 AI shorts every day", url: "https://www.youtube.com/watch?v=USanodvs97U" },
     ],
   },
   {
@@ -259,8 +259,8 @@ Again, sorry for the inconvenience — we'll get this sorted quickly.
 — CS Bot Co.`,
     },
     youtube: [
-      { title: "Landing CS contracts with AI", url: "https://www.youtube.com/results?search_query=ai+customer+support+outsourcing+saas" },
-      { title: "How a solo founder built an AI CS service", url: "https://www.youtube.com/results?search_query=solo+founder+ai+customer+support+service" },
+      { title: "Landing CS contracts with AI", url: "https://www.youtube.com/watch?v=5BnLNqNrrvo" },
+      { title: "How a solo founder built an AI CS service", url: "https://www.youtube.com/watch?v=_Xepe4utcAU" },
     ],
   },
 ];
