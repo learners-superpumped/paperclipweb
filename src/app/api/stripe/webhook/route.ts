@@ -17,6 +17,7 @@ import {
   isPaperclipConfigured,
   createPaperclipCompany,
   createCompanyInvite,
+  registerGstackSkills,
 } from "@/lib/paperclip";
 import type Stripe from "stripe";
 
@@ -148,6 +149,7 @@ export async function POST(req: Request) {
                 paperclipCompanyId = pcCompany.id;
                 const invite = await createCompanyInvite(pcCompany.id, "owner");
                 if (invite?.url) instanceUrl = invite.url;
+                await registerGstackSkills(pcCompany.id);
               }
             }
 

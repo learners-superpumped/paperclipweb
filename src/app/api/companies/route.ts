@@ -8,6 +8,7 @@ import {
   createPaperclipCompany,
   createCompanyInvite,
   getPaperclipCompanyUrl,
+  registerGstackSkills,
 } from "@/lib/paperclip";
 
 const CreateCompanySchema = z.object({
@@ -83,6 +84,8 @@ export async function POST(req: Request) {
       // 실패 시 fallback: paperclip company URL 자체를 instanceUrl 로 (사용자가 거기서 직접 로그인).
       const invite = await createCompanyInvite(pcCompany.id, "owner");
       const instanceUrl = invite?.url ?? getPaperclipCompanyUrl(pcCompany.id);
+
+      await registerGstackSkills(pcCompany.id);
 
       const company = await createCompany({
         userId: user.id,

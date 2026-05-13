@@ -313,6 +313,206 @@ export function getPaperclipCompanyUrl(companyId: string): string {
   return `${baseUrl}/companies/${companyId}`;
 }
 
+// ─── Skill Operations ───
+
+const GSTACK_SKILLS = [
+  {
+    slug: "gstack-officehour",
+    name: "gstack-officehour",
+    description:
+      "Use when the user wants to evaluate a startup idea with Garry Tan's 6 forcing questions, run a gstack office hours session, pitch an idea, get structured YC-style feedback, validate startup hypotheses, or grade an idea.",
+    markdown: `---
+name: gstack-officehour
+
+description: >-
+  Use when the user wants to evaluate a startup idea with Garry Tan's 6 forcing
+  questions, run a gstack office hours session, pitch an idea, get structured
+  YC-style feedback, validate startup hypotheses, or grade an idea. Trigger
+  phrases: "gstack", "office hours", "evaluate my idea", "pitch my startup",
+  "Garry Tan questions", "run gstack", "아이디어 검증", "스타트업 평가".
+
+allowed-tools:
+---
+
+# gstack Office Hours
+
+Garry Tan의 YC Office Hours 프레임워크를 구현합니다. 사용자의 아이디어를 6가지 forcing question으로 분석하고 각 답변에 즉시 피드백을 줍니다.
+
+## Session structure
+
+먼저 사용자에게 아이디어를 한 문장으로 말해달라고 합니다.
+
+그런 다음 6가지 질문을 **하나씩** 합니다. 각 질문 후 사용자의 답변을 받고, Garry Tan 스타일로 pushback을 줍니다.
+
+### 6 forcing questions
+
+1. **Q1 — Who is this for, very specifically?**
+   Name the exact person, role, or situation. Broad markets do not count.
+
+2. **Q2 — What pain are they paying for today?**
+   Show the current workaround, budget, or wasted time.
+
+3. **Q3 — Why now? What changed in the world?**
+   Point to a new behavior, platform shift, regulation, or cost curve.
+
+4. **Q4 — What's the V1 you can build in 4 weeks?**
+   Keep the wedge small enough to ship and learn from.
+
+5. **Q5 — How will you reach the first 100 users?**
+   Name the channel and the first message, not a vague growth plan.
+
+6. **Q6 — What does success look like at month 6?**
+   Pick measurable traction that would make the next step obvious.
+
+## Scoring per question
+
+Each answer gets a score:
+- **Strong** — specific, testable, evidence-backed
+- **Moderate** — useful direction, but one assumption too soft to test
+- **Weak** — too broad to act on; name the specific user/pain/proof point
+
+Score + 1-sentence reason + 2-sentence pushback. Then move to the next question.
+
+## After Q6
+
+1. **Grade** — A (85+), B+ (75+), B (60+), C+ (45+), C (below 45). Weight all 6 scores equally.
+2. **Refined idea** — one sentence that sharpens the original with what you learned across the 6 questions.
+3. **Homework** — 3 concrete next steps, one per weakest answer.
+
+## Tone principles (enforce throughout)
+
+- Direct. Never pad with "great question" or "that's interesting."
+- Specific. Every pushback names a specific missing element (not "needs more detail").
+- Falsifiable. Every suggestion ends with what would prove or disprove it.
+- Garry-voice. Terse. Affirming when strong. Relentless on weak spots.
+`,
+  },
+  {
+    slug: "gstack-research",
+    name: "gstack-research",
+    description:
+      "Use when the user wants to research market size, competition, existing solutions, customer signals, or validate assumptions for a startup idea.",
+    markdown: `---
+name: gstack-research
+
+description: >-
+  Use when the user wants to research market size, competition, existing
+  solutions, customer signals, or validate assumptions for a startup idea.
+  Trigger phrases: "research my idea", "market research", "who else is doing
+  this", "validate assumptions", "시장조사", "경쟁사 분석", "타당성 검증".
+
+allowed-tools:
+---
+
+# gstack Research
+
+아이디어의 시장·경쟁·고객·타이밍을 빠르게 리서치합니다.
+
+## Structure
+
+1. 아이디어를 받는다.
+2. 5개 축으로 분석:
+   - **Market size**: 이 문제를 가진 사람이 실제로 얼마나 있나? (bottom-up estimate)
+   - **Existing solutions**: 지금 사람들은 어떻게 해결하나? (workaround, competitor, manual)
+   - **Customer signal**: 누군가 이 문제에 돈을 지불한 증거가 있나? (Reddit, ProductHunt, Job board, App store)
+   - **Market timing**: 왜 지금인가? (새로운 API, 규제 변화, 플랫폼 shift, 비용 곡선)
+   - **Wedge**: 처음 100명을 어디서 찾나? (specific community, channel, job title)
+
+3. 각 축에서 **Confirmed / Uncertain / Red flag** 판정 + 1줄 근거.
+4. 마지막: "이 중 가장 불확실한 가정 하나와, 1주 안에 검증하는 방법".
+
+## Tone
+Garry Tan처럼: 직접적, 구체적, 빠름. 칭찬 없이 바로 본론.
+`,
+  },
+  {
+    slug: "gstack-brainstorm",
+    name: "gstack-brainstorm",
+    description:
+      "Use when the user wants to generate startup ideas, explore pivots, find adjacent opportunities, or brainstorm variations on a concept.",
+    markdown: `---
+name: gstack-brainstorm
+
+description: >-
+  Use when the user wants to generate startup ideas, explore pivots, find
+  adjacent opportunities, or brainstorm variations on a concept.
+  Trigger phrases: "brainstorm ideas", "what else could I build", "pivot ideas",
+  "adjacent ideas", "아이디어 발산", "다른 방향", "피벗", "아이디어 변형".
+
+allowed-tools:
+---
+
+# gstack Brainstorm
+
+아이디어를 6가지 각도로 발산·변형합니다.
+
+## Structure
+
+1. 사용자의 관심 도메인 또는 초기 아이디어를 받는다.
+2. **6가지 각도**에서 아이디어 변형:
+   - **Niche down**: 더 좁은 타겟 (정확한 직함 + 회사 유형)
+   - **Scale up**: 더 큰 인접 시장
+   - **Adjacent problem**: 같은 고객의 다른 통증
+   - **Distribution angle**: 다른 채널로 동일 솔루션
+   - **Timing play**: 12개월 후 10배 쉬워지는 이유
+   - **Contrarian**: 이 공간에서 모두가 잘못 생각하는 것
+
+3. 각 변형: 아이디어 1줄 + 가치를 결정하는 가장 날카로운 질문 1개.
+4. 마지막: "당신 배경에 가장 잘 맞는 변형 하나 + 이번 주 첫 번째 행동".
+
+## Tone
+Garry Tan: 빠르고 직접적. 아이디어는 구체적인 고객과 행동으로 묘사. 칭찬 없음.
+`,
+  },
+] as const;
+
+export async function listCompanySkills(
+  companyId: string
+): Promise<Array<{ id: string; slug: string; name: string }>> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/skills`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as Array<{ id: string; slug: string; name: string }>;
+    if (!Array.isArray(data)) return [];
+    return data.filter((s) => s && typeof s.slug === "string");
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Register the 3 gstack skills (officehour, research, brainstorm) in a company's
+ * paperclip skill library. Idempotent — skips skills already present by slug.
+ */
+export async function registerGstackSkills(companyId: string): Promise<void> {
+  try {
+    const existing = await listCompanySkills(companyId);
+    const existingSlugs = new Set(existing.map((s) => s.slug));
+
+    for (const skill of GSTACK_SKILLS) {
+      if (existingSlugs.has(skill.slug)) continue;
+      const res = await paperclipFetch(`/api/companies/${companyId}/skills`, {
+        method: "POST",
+        body: JSON.stringify({
+          slug: skill.slug,
+          name: skill.name,
+          description: skill.description,
+          markdown: skill.markdown,
+        }),
+      });
+      if (!res.ok) {
+        console.error(
+          `[Paperclip] registerGstackSkills: failed to register ${skill.slug}:`,
+          res.status,
+          await res.text().catch(() => "")
+        );
+      }
+    }
+  } catch (err) {
+    console.error("[Paperclip] registerGstackSkills error:", err);
+  }
+}
+
 /**
  * Health check: verify Paperclip instance is reachable.
  */

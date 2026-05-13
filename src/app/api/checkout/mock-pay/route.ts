@@ -18,6 +18,7 @@ import {
   isPaperclipConfigured,
   createPaperclipCompany,
   createCompanyInvite,
+  registerGstackSkills,
 } from "@/lib/paperclip";
 
 const Body = z.object({ caseId: z.string().nullable().optional() });
@@ -134,6 +135,7 @@ export async function POST(req: Request) {
           nextPaperclipCompanyId = pcCompany.id;
           const invite = await createCompanyInvite(pcCompany.id, "owner");
           nextInstanceUrl = invite?.url ?? nextInstanceUrl;
+          await registerGstackSkills(pcCompany.id);
         }
       }
 
@@ -205,6 +207,7 @@ export async function POST(req: Request) {
       paperclipCompanyId = pcCompany.id;
       const invite = await createCompanyInvite(pcCompany.id, "owner");
       if (invite?.url) instanceUrl = invite.url;
+      await registerGstackSkills(pcCompany.id);
     }
   }
 
