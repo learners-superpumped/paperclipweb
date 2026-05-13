@@ -12,7 +12,23 @@ import {
   trackServerSubscriptionCanceled,
 } from "@/lib/analytics-server";
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
+import { findCase } from "@/lib/cases";
+import {
+  isPaperclipConfigured,
+  createPaperclipCompany,
+  createCompanyInvite,
+} from "@/lib/paperclip";
 import type Stripe from "stripe";
+
+function makeWebhookSlug(name: string): string {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 24) || "company";
+  const rand = Math.random().toString(36).slice(2, 6);
+  return `${base}-${rand}`;
+}
 
 // Plan prices for server-side event properties. spec.md ## 6 pricing SoT: 단일 플랜 Pro $29/mo.
 const PLAN_PRICES: Record<string, number> = {
@@ -103,20 +119,50 @@ export async function POST(req: Request) {
             `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
           );
 
-          // Auto-provision instance from onboarding data
+          // Auto-provision real paperclip instance from onboarding/case data
           const paidUser = await getUserById(userId);
-          if (paidUser?.onboardingData) {
-            try {
-              const obData = JSON.parse(paidUser.onboardingData);
-              const companyName = obData.idea.slice(0, 50);
-              await createCompany({
-                userId,
-                name: companyName,
-                status: "provisioning",
-              });
-            } catch (err) {
-              console.error("[Webhook] Failed to auto-provision:", err);
+          const sessionCaseId = session.metadata?.caseId ?? "";
+          try {
+            // Resolve company name from caseId template or onboardingData
+            let companyName = "My AI Company";
+            if (sessionCaseId) {
+              const tmpl = findCase(sessionCaseId);
+              if (tmpl?.company) companyName = tmpl.company;
+            } else if (paidUser?.onboardingData) {
+              const obData = JSON.parse(paidUser.onboardingData) as Record<string, unknown>;
+              const raw = obData.companyName ?? obData.company ?? obData.idea ?? obData.name;
+              if (raw) companyName = String(raw).slice(0, 50);
             }
+
+            const slug = makeWebhookSlug(companyName);
+
+            // Provision real paperclip company + invite
+            let paperclipCompanyId: string | undefined;
+            let instanceUrl: string | undefined;
+            if (isPaperclipConfigured()) {
+              const pcCompany = await createPaperclipCompany(
+                companyName,
+                `paperclipweb subscriber instance for ${paidUser?.email ?? userId}`,
+              );
+              if (pcCompany?.id) {
+                paperclipCompanyId = pcCompany.id;
+                const invite = await createCompanyInvite(pcCompany.id, "ceo");
+                if (invite?.url) instanceUrl = invite.url;
+              }
+            }
+
+            await createCompany({
+              userId,
+              name: companyName,
+              slug,
+              caseId: sessionCaseId || undefined,
+              paperclipCompanyId,
+              instanceUrl,
+              mockMode: false,
+              status: paperclipCompanyId ? "running" : "provisioning",
+            });
+          } catch (err) {
+            console.error("[Webhook] Failed to auto-provision:", err);
           }
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed

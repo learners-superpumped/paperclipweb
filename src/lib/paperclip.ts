@@ -28,20 +28,19 @@ async function getPaperclipSessionCookie(): Promise<string | null> {
     return null;
   }
 
-  // Extract set-cookie header for session
+  // Strategy 1: named session cookies (better-auth convention)
   const setCookie = res.headers.getSetCookie?.() ?? [];
-  const sessionCookie = setCookie
+  const namedCookie = setCookie
     .map((c) => c.split(";")[0])
-    .filter((c) => c.startsWith("better-auth") || c.startsWith("paperclip"))
+    .filter((c) => c.startsWith("better-auth") || c.startsWith("paperclip") || c.startsWith("session"))
     .join("; ");
-
-  if (sessionCookie) {
-    cachedSessionCookie = sessionCookie;
-    sessionExpiresAt = Date.now() + 55 * 60 * 1000; // refresh every 55 min
-    return sessionCookie;
+  if (namedCookie) {
+    cachedSessionCookie = namedCookie;
+    sessionExpiresAt = Date.now() + 55 * 60 * 1000;
+    return namedCookie;
   }
 
-  // Fallback: some versions return all cookies
+  // Strategy 2: all cookies as fallback (some versions)
   const allCookies = setCookie.map((c) => c.split(";")[0]).join("; ");
   if (allCookies) {
     cachedSessionCookie = allCookies;
@@ -49,6 +48,24 @@ async function getPaperclipSessionCookie(): Promise<string | null> {
     return allCookies;
   }
 
+  // Strategy 3: extract Bearer token from JSON body (better-auth v1+ may return token in body)
+  try {
+    const body = await res.clone().json() as Record<string, unknown>;
+    const token =
+      (body?.token as string | undefined) ??
+      ((body?.session as Record<string, unknown> | undefined)?.token as string | undefined) ??
+      ((body?.data as Record<string, unknown> | undefined)?.token as string | undefined);
+    if (token) {
+      // Store with prefix so paperclipFetch uses Authorization header
+      cachedSessionCookie = `__bearer__${token}`;
+      sessionExpiresAt = Date.now() + 55 * 60 * 1000;
+      return cachedSessionCookie;
+    }
+  } catch {
+    // JSON parse failure — no body token
+  }
+
+  console.error("[Paperclip] Could not extract session from auth response (no cookies, no body token)");
   return null;
 }
 
@@ -104,7 +121,11 @@ async function paperclipFetch(
   } else {
     const cookie = await getPaperclipSessionCookie();
     if (cookie) {
-      headers.Cookie = cookie;
+      if (cookie.startsWith("__bearer__")) {
+        headers.Authorization = `Bearer ${cookie.slice(10)}`;
+      } else {
+        headers.Cookie = cookie;
+      }
     }
   }
 

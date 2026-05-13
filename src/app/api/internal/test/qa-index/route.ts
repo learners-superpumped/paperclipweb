@@ -10,16 +10,15 @@ export const dynamic = "force-dynamic";
 // Usage: GET /api/internal/test/qa-index
 // (authenticated via session cookie)
 export async function GET() {
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTest = process.env.STRIPE_TEST_MODE === "true";
-  if (!isMock && !isTest) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
-
+  // Discovery-only endpoint: read-only, no data modification.
+  // Accessible in all modes (including production) — session auth only.
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
+  const isTest = process.env.STRIPE_TEST_MODE === "true";
 
   return NextResponse.json({
     ok: true,

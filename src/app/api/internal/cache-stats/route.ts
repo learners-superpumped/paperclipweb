@@ -1,29 +1,42 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { and, eq, desc } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users, creditTransactions } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
 // Returns Anthropic prompt cache hit ratio for a user's recent tasks.
-// Protected by CRON_SECRET bearer token.
+// Auth options:
+//   1. CRON_SECRET bearer token (any email via ?email= param)
+//   2. Session cookie (own stats only — email param ignored)
 // QA: GET /api/internal/cache-stats?email=<email>&limit=<n>
 export async function GET(req: Request) {
   const headersList = await headers();
-  const auth = headersList.get("authorization");
+  const authHeader = headersList.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const hasCronSecret = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
 
   const { searchParams } = new URL(req.url);
-  const email = searchParams.get("email");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
 
-  if (!email) return NextResponse.json({ error: "email required" }, { status: 400 });
+  let targetEmail: string | null = null;
 
-  const [user] = await db().select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (hasCronSecret) {
+    // CRON_SECRET path: caller specifies email
+    targetEmail = searchParams.get("email");
+    if (!targetEmail) return NextResponse.json({ error: "email required" }, { status: 400 });
+  } else {
+    // Session auth path: own stats only
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    targetEmail = session.user.email;
+  }
+
+  const [user] = await db().select({ id: users.id }).from(users).where(eq(users.email, targetEmail)).limit(1);
   if (!user) return NextResponse.json({ error: "user not found" }, { status: 404 });
 
   const txns = await db()

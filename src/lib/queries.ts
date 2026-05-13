@@ -53,8 +53,11 @@ export async function getCompanyById(id: string) {
 export async function createCompany(data: {
   userId: string;
   name: string;
+  slug?: string;
+  caseId?: string;
   paperclipCompanyId?: string;
   instanceUrl?: string;
+  mockMode?: boolean;
   status?: string;
 }) {
   const result = await db()
@@ -62,8 +65,11 @@ export async function createCompany(data: {
     .values({
       userId: data.userId,
       name: data.name,
+      slug: data.slug,
+      caseId: data.caseId,
       paperclipCompanyId: data.paperclipCompanyId,
       instanceUrl: data.instanceUrl,
+      mockMode: data.mockMode ?? false,
       status: data.status ?? "provisioning",
     })
     .returning();

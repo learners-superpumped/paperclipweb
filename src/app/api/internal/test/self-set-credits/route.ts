@@ -6,26 +6,18 @@ import { users, creditTransactions } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
-// QA endpoint: set the CURRENT SESSION USER's credit balance to a specific value.
-// No CRON_SECRET required — authenticated via session cookie (same as all QA steps).
-// Protected by mode flag: returns 404 in live mode (PAPERCLIP_PAYMENT_MOCK=false AND STRIPE_TEST_MODE=false).
+// QA endpoint: set the CURRENT SESSION USER's credit balance.
+// Authenticated via session cookie — no CRON_SECRET required.
 //
-// Usage:
-//   POST /api/internal/test/self-set-credits
-//   Cookie: next-auth.session-token=<session>
-//   Body: { "balance": 19 }
+// PRODUCTION SAFETY: in live mode (not test/mock), only DECREASING the balance
+// is allowed (balance must be ≤ current). This prevents users from inflating
+// their own credits for free. In test/mock mode any value is accepted.
 //
 // Use cases:
-//   10.F4 — set balance to 19 (below 20), then navigate to /i/<slug> and assert low-balance-banner
-//   10.F5 — set balance to 0, then try to run task → should be blocked
-//   10.F6 — set balance to 0, then topup → balance should increase by 50
+//   10.F4 — set balance to 19 (below 20 threshold), check low-balance banner
+//   10.F5 — set balance to 0, then run task → blocked with top-up CTA
+//   10.F6 — set balance to 0, then call mock-topup → balance reflects +50
 export async function POST(req: Request) {
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTest = process.env.STRIPE_TEST_MODE === "true";
-  if (!isMock && !isTest) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
-
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -42,6 +34,17 @@ export async function POST(req: Request) {
     .where(eq(users.email, session.user.email))
     .limit(1);
   if (!user) return NextResponse.json({ error: "user not found" }, { status: 404 });
+
+  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
+  const isTest = process.env.STRIPE_TEST_MODE === "true";
+
+  // In live mode: only allow decreasing (prevent free-credit inflation)
+  if (!isMock && !isTest && balance > user.creditsBalance) {
+    return NextResponse.json(
+      { error: "cannot_increase_credits", message: "In live mode only credit decreases are allowed via this endpoint." },
+      { status: 403 },
+    );
+  }
 
   const [updated] = await db()
     .update(users)
