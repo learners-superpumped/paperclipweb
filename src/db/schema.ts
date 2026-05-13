@@ -197,21 +197,6 @@ export const signupIntents = paperclipwebSchema.table("signup_intents", {
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 });
 
-// ─── Legacy Onboarding (pre-payment onboarding data, no longer written to) ───
-export const legacyOnboarding = paperclipwebSchema.table("legacy_onboarding", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  caseId: text("case_id").notNull(),
-  companyName: text("company_name").notNull(),
-  payloadJson: text("payload_json").notNull(), // 회사·직원·첫 task 결과 JSON
-  firstTaskResult: text("first_task_result"),
-  firstTaskEmailSentAt: timestamp("first_task_email_sent_at", { withTimezone: true }),
-  migratedToCompanyId: uuid("migrated_to_company_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index("mock_companies_user_idx").on(table.userId),
-]);
-
 // ─── Stripe Events (idempotency) ───
 export const stripeEvents = paperclipwebSchema.table("stripe_events", {
   stripeEventId: text("stripe_event_id").primaryKey(),

@@ -131,8 +131,9 @@ export async function GET(req: NextRequest) {
           }
 
           send({ step: "heartbeat", label: "Firing first heartbeat…" });
+          // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           if (paperclipCompanyId) {
-            await pollForFirstWorkProduct(paperclipCompanyId, 20000);
+            await pollForFirstWorkProduct(paperclipCompanyId, 0);
           }
 
           send({ step: "invite", label: "Sending you the keys…" });
@@ -412,10 +413,10 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Step 3: Heartbeat
+        // Step 3: Heartbeat — fired by approve+resume above; poll briefly for fast completions
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         if (paperclipCompanyId) {
-          await pollForFirstWorkProduct(paperclipCompanyId, 20000);
+          await pollForFirstWorkProduct(paperclipCompanyId, 0);
         }
 
         // Step 4: Create invite
