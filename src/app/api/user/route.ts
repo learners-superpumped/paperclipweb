@@ -24,8 +24,6 @@ export async function GET() {
       email: user.email,
       name: user.name,
       plan: user.plan,
-      creditsBalance: user.creditsBalance,
-      creditsLimit: user.creditsLimit,
       createdAt: user.createdAt,
       onboardingData: user.onboardingData,
     });

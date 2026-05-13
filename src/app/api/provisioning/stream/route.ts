@@ -97,17 +97,16 @@ export async function GET(req: NextRequest) {
           let instanceUrl: string | undefined;
 
           const mockRawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-          const templateRef = mockRawTemplateRef ?? "main";
+          const hasValidMockRef = mockRawTemplateRef && /^[0-9a-f]{40}$/i.test(mockRawTemplateRef);
+          if (!hasValidMockRef) {
+            console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${mockRawTemplateRef ?? ""}' is not a 40-char SHA — using inline template fallback.`);
+          }
+          const templateRef = hasValidMockRef ? mockRawTemplateRef! : "";
 
           send({ step: "import", label: "Importing company template…" });
 
           if (isPaperclipConfigured() && resolvedCaseId) {
             const templateSource = `learners-superpumped/paperclip-templates/${resolvedCaseId}`;
-            if (!mockRawTemplateRef) {
-              console.error("[Provisioning/mock] PAPERCLIP_TEMPLATE_REF not set — falling back to 'main'.");
-            } else if (!/^[0-9a-f]{40}$/i.test(mockRawTemplateRef)) {
-              console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${mockRawTemplateRef}' is not a 40-char SHA.`);
-            }
 
             const mockRand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
             const mockPaperclipCompanyName = `${mockRand3} · ${companyName}`;
