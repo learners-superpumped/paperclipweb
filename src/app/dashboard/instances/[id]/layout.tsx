@@ -28,7 +28,9 @@ export default async function InstanceLayout({
     .from(companies)
     .where(and(eq(companies.id, id), eq(companies.userId, user.id)))
     .limit(1);
-  if (company && !company.mockMode && company.instanceUrl) {
+  // instanceUrl 이 절대 URL (paperclip engine) 일 때만 redirect.
+  // "/dashboard/instances/<id>" → "/i/<slug>" 같은 자체 path 면 무한 redirect 발생.
+  if (company && !company.mockMode && company.instanceUrl?.startsWith("http")) {
     redirect(company.instanceUrl);
   }
   return <>{children}</>;

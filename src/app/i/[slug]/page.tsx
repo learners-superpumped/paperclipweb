@@ -35,8 +35,9 @@ export default async function InstancePage({
   if (!company) notFound();
 
   // spec 13.F2 강제: 진짜 인스턴스 활성화된 사용자는 paperclip 의 진짜 UI 로 즉시 redirect.
-  // paperclipweb 자체 InstanceShell 은 mock 온보딩 (mockMode=true) 단계만 노출.
-  if (!company.mockMode && company.instanceUrl) {
+  // 단 instanceUrl 이 절대 URL (paperclip engine) 인 경우만 — `/i/<slug>` 같은
+  // paperclipweb 자체 path 면 무한 redirect 발생하므로 자체 InstanceShell 노출.
+  if (!company.mockMode && company.instanceUrl?.startsWith("http")) {
     redirect(company.instanceUrl);
   }
 
