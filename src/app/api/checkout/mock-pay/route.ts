@@ -14,6 +14,11 @@ import {
 import { findCase } from "@/lib/cases";
 import { sendEmail } from "@/lib/agentmail";
 import { PLANS } from "@/lib/constants";
+import {
+  isPaperclipConfigured,
+  createPaperclipCompany,
+  createCompanyInvite,
+} from "@/lib/paperclip";
 
 const Body = z.object({ caseId: z.string().nullable().optional() });
 
@@ -115,6 +120,23 @@ export async function POST(req: Request) {
     if (existing?.slug) {
       // Always update company with latest mock/template data regardless of mock presence
       const nextEmployeesJson = employeesJson ? JSON.stringify(employeesJson) : null;
+
+      // spec 13/14: paperclipCompanyId 가 아직 null 이면 paperclip engine 에 진짜 company + invite 생성.
+      // (idempotent 재호출 시에도 진짜 인스턴스 누락된 옛 row 회복)
+      let nextPaperclipCompanyId: string | null = existing.paperclipCompanyId;
+      let nextInstanceUrl: string | null = existing.instanceUrl;
+      if (!existing.paperclipCompanyId && isPaperclipConfigured()) {
+        const pcCompany = await createPaperclipCompany(
+          companyName,
+          `paperclipweb subscriber instance for ${user.email ?? user.id}`,
+        );
+        if (pcCompany?.id) {
+          nextPaperclipCompanyId = pcCompany.id;
+          const invite = await createCompanyInvite(pcCompany.id, "ceo");
+          nextInstanceUrl = invite?.url ?? nextInstanceUrl;
+        }
+      }
+
       await db()
         .update(companies)
         .set({
@@ -124,6 +146,8 @@ export async function POST(req: Request) {
           mockMode: false,
           updatedAt: new Date(),
           ...(nextEmployeesJson ? { employeesJson: nextEmployeesJson } : {}),
+          ...(nextPaperclipCompanyId ? { paperclipCompanyId: nextPaperclipCompanyId } : {}),
+          ...(nextInstanceUrl ? { instanceUrl: nextInstanceUrl } : {}),
         })
         .where(eq(companies.id, existing.id));
 
@@ -168,6 +192,22 @@ export async function POST(req: Request) {
 
   const slug = makeSlug(companyName);
 
+  // spec 13/14: 결제 성공 시 paperclip engine 에 진짜 company 생성 + SSO invite 발급.
+  // 그래야 사용자가 자기 paperclip UI 전체를 그대로 사용 가능. instanceUrl 은 invite URL.
+  let paperclipCompanyId: string | null = null;
+  let instanceUrl: string = `/i/${slug}`;
+  if (isPaperclipConfigured()) {
+    const pcCompany = await createPaperclipCompany(
+      companyName,
+      `paperclipweb subscriber instance for ${user.email ?? user.id}`,
+    );
+    if (pcCompany?.id) {
+      paperclipCompanyId = pcCompany.id;
+      const invite = await createCompanyInvite(pcCompany.id, "ceo");
+      if (invite?.url) instanceUrl = invite.url;
+    }
+  }
+
   const [company] = await db()
     .insert(companies)
     .values({
@@ -178,7 +218,8 @@ export async function POST(req: Request) {
       employeesJson: employeesJson ? JSON.stringify(employeesJson) : null,
       status: "running",
       mockMode: false,
-      instanceUrl: `/i/${slug}`,
+      paperclipCompanyId,
+      instanceUrl,
     })
     .returning();
 
