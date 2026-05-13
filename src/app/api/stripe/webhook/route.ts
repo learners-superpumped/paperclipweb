@@ -142,8 +142,12 @@ export async function POST(req: Request) {
               }).onConflictDoNothing();
             }
 
-            // Grant $9 LLM credit balance (idempotent — provisioning stream may also do this)
-            await tx.insert(balances).values({ userId: resolvedUserId, dollars: "9.0000" }).onConflictDoNothing();
+            // Grant $9 LLM credit balance — reset on re-subscribe (onConflictDoUpdate).
+            // Provisioning stream also resets for re-subscribe; both set to same value (idempotent).
+            await tx.insert(balances).values({ userId: resolvedUserId, dollars: "9.0000" }).onConflictDoUpdate({
+              target: balances.userId,
+              set: { dollars: "9.0000", updatedAt: new Date() },
+            });
 
             // Company stub — provisioning stream will update with paperclipCompanyId/instanceUrl
             await tx.insert(companies).values({
@@ -193,8 +197,12 @@ export async function POST(req: Request) {
               description: `${plan} plan activated - ${planCredits.balance} credits`,
             });
 
-            // B.1.I3: grant $9 LLM dollar balance atomically with subscription creation
-            await tx.insert(balances).values({ userId, dollars: "9.0000" }).onConflictDoNothing();
+            // B.1.I3: grant $9 LLM dollar balance atomically with subscription creation.
+            // Reset on re-subscribe (onConflictDoUpdate).
+            await tx.insert(balances).values({ userId, dollars: "9.0000" }).onConflictDoUpdate({
+              target: balances.userId,
+              set: { dollars: "9.0000", updatedAt: new Date() },
+            });
             await tx.insert(balanceMovements).values({
               userId,
               kind: "grant",

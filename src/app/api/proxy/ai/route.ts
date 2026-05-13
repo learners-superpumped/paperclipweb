@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { addCreditTransaction } from "@/lib/queries";
-import { trackServerCreditsUsed } from "@/lib/analytics-server";
 
 const AIRequestSchema = z.object({
   model: z.string().min(1),
@@ -135,30 +133,6 @@ export async function POST(req: Request) {
     } else {
       result = await callOpenAIAPI(model, messages);
     }
-
-    // Deduct 1 credit
-    const txResult = await addCreditTransaction({
-      userId: user.id,
-      amount: -1,
-      type: "usage",
-      description: `AI action: ${model}`,
-      companyId: instance_id,
-      provider,
-      model,
-      tokensInput: result.tokens_input,
-      tokensOutput: result.tokens_output,
-    });
-
-    if (!txResult.success) {
-      // Race condition: balance went to 0 between check and deduction
-      return NextResponse.json(
-        { error: "Insufficient credits" },
-        { status: 402 }
-      );
-    }
-
-    // Track analytics
-    await trackServerCreditsUsed(user.id, 1, "ai_proxy", instance_id);
 
     return NextResponse.json({
       content: result.content,

@@ -69,7 +69,7 @@ export async function POST() {
   const priceId = await ensurePrice({
     lookupKey: "paperclipweb_topup_10",
     unitAmount: 1000, // $10
-    productName: "Paperclip Top Up — 50 actions",
+    productName: "Paperclip Top Up — $4.50 LLM credit",
     interval: undefined, // one-time payment
   });
 
