@@ -4,7 +4,7 @@ import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
 import { users, subscriptions, invoices, companies, stripeEvents, balances, balanceMovements, creditTransactions } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { addCreditTransaction, getUserById, createCompany } from "@/lib/queries";
+import { addCreditTransaction } from "@/lib/queries";
 import { notifySlack } from "@/lib/slack";
 import {
   trackServerCheckoutCompleted,
@@ -14,10 +14,6 @@ import {
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
 import {
-  isPaperclipConfigured,
-  createPaperclipCompany,
-  createCompanyInvite,
-  registerGstackSkills,
   archivePaperclipCompany,
   syncCompanyBudget,
 } from "@/lib/paperclip";
@@ -223,51 +219,26 @@ export async function POST(req: Request) {
             `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
           );
 
-          // Auto-provision real paperclip instance from onboarding/case data
-          const paidUser = await getUserById(userId);
-          const sessionCaseId = session.metadata?.caseId ?? "";
+          // Create company stub so B.1.I3 row exists within 5s.
+          // Provisioning stream handles template import + paperclipCompanyId (avoids B.1.I2 duplicate).
           try {
-            // Resolve company name from caseId template or onboardingData
+            const sessionCaseId = session.metadata?.caseId ?? "";
             let companyName = "My AI Company";
             if (sessionCaseId) {
               const tmpl = findCase(sessionCaseId);
               if (tmpl?.company) companyName = tmpl.company;
-            } else if (paidUser?.onboardingData) {
-              const obData = JSON.parse(paidUser.onboardingData) as Record<string, unknown>;
-              const raw = obData.companyName ?? obData.company ?? obData.idea ?? obData.name;
-              if (raw) companyName = String(raw).slice(0, 50);
             }
-
             const slug = makeWebhookSlug(companyName);
-
-            // Provision real paperclip company + invite
-            let paperclipCompanyId: string | undefined;
-            let instanceUrl: string | undefined;
-            if (isPaperclipConfigured()) {
-              const pcCompany = await createPaperclipCompany(
-                companyName,
-                `paperclipweb subscriber instance for ${paidUser?.email ?? userId}`,
-              );
-              if (pcCompany?.id) {
-                paperclipCompanyId = pcCompany.id;
-                const invite = await createCompanyInvite(pcCompany.id, "owner");
-                if (invite?.url) instanceUrl = invite.url;
-                await registerGstackSkills(pcCompany.id);
-              }
-            }
-
-            await createCompany({
+            await db().insert(companies).values({
               userId,
               name: companyName,
               slug,
               caseId: sessionCaseId || undefined,
-              paperclipCompanyId,
-              instanceUrl,
               legacyMode: false,
-              status: paperclipCompanyId ? "running" : "provisioning",
-            });
+              status: "provisioning",
+            }).onConflictDoNothing();
           } catch (err) {
-            console.error("[Webhook] Failed to auto-provision:", err);
+            console.error("[Webhook] Failed to create company stub:", err);
           }
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed

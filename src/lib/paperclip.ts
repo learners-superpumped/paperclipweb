@@ -534,12 +534,16 @@ export async function pollForFirstWorkProduct(
   timeoutMs: number
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
+  // Check both in-progress (agent actively running) and todo (assigned, heartbeat pending).
+  const statuses = ["in-progress", "todo"];
   while (Date.now() < deadline) {
     try {
-      const res = await paperclipFetch(`/api/companies/${paperclipCompanyId}/issues?status=in-progress`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) return true;
+      for (const status of statuses) {
+        const res = await paperclipFetch(`/api/companies/${paperclipCompanyId}/issues?status=${status}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) return true;
+        }
       }
     } catch {
       // Ignore transient errors and keep polling

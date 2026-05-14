@@ -270,29 +270,47 @@ export async function GET(req: NextRequest) {
               .where(eq(users.id, userId));
           }
 
-          // Grant $9 LLM credit balance
-          await db()
+          // Grant $9 LLM credit balance. Only record movement if balance was newly created —
+          // prevents duplicate grant movement when webhook already granted it (e.g. authenticated checkout).
+          const [newBalance] = await db()
             .insert(balances)
             .values({ userId, dollars: "9.0000" })
-            .onConflictDoNothing();
+            .onConflictDoNothing()
+            .returning();
 
-          await db().insert(balanceMovements).values({
-            userId,
-            kind: "grant",
-            dollarsDelta: "9.0000",
-            reference: sessionId,
-          });
+          if (newBalance) {
+            await db().insert(balanceMovements).values({
+              userId,
+              kind: "grant",
+              dollarsDelta: "9.0000",
+              reference: sessionId,
+            });
+          }
         }
 
         if (alreadyProvisioned && existingEvent[0]) {
-          // Already fully provisioned — just resend invite
           const company = existingCompanies[0];
           if (company.instanceUrl) {
+            // Already fully provisioned — resend existing invite URL
             send({ step: "invite", label: "Sending you the keys…" });
             send({ done: true, url: company.instanceUrl });
             controller.close();
             return;
           }
+          // Company provisioned but no instanceUrl (partial failure on prior run) — create new invite
+          if (company.paperclipCompanyId) {
+            send({ step: "invite", label: "Sending you the keys…" });
+            const BASE_URL_RETRY = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+            const retryInvite = await createCompanyInvite(company.paperclipCompanyId, "owner");
+            const retryUrl = retryInvite?.url ?? `${BASE_URL_RETRY}/account`;
+            if (retryInvite?.url) {
+              await db().update(companies).set({ instanceUrl: retryInvite.url, updatedAt: new Date() }).where(eq(companies.id, company.id));
+            }
+            send({ done: true, url: retryUrl });
+            controller.close();
+            return;
+          }
+          // paperclipCompanyId set but null somehow — fall through to full reprovisioning
         }
 
         // 30-day re-subscribe: restore archived company instead of creating new
@@ -387,13 +405,15 @@ export async function GET(req: NextRequest) {
 
         const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
         const hasValidRef = rawTemplateRef && /^[0-9a-f]{40}$/i.test(rawTemplateRef);
-        if (!hasValidRef) {
-          console.warn(
-            `[Provisioning] PAPERCLIP_TEMPLATE_REF='${rawTemplateRef ?? ""}' is not a 40-char SHA — passing empty ref so importPaperclipCompany falls back to inline template.`
-          );
+        if (rawTemplateRef && !hasValidRef) {
+          // B.2.I3: PAPERCLIP_TEMPLATE_REF is set but is not a valid 40-char SHA (e.g. a branch name).
+          // Hard-fail to prevent silent template drift — fix the Vercel env var.
+          send({ error: `PAPERCLIP_TEMPLATE_REF ('${rawTemplateRef}') must be a 40-char commit SHA, not a branch name. Update the Vercel env var to prevent template drift.` });
+          controller.close();
+          return;
         }
-        // With empty ref, buildGithubTreeUrl produces an invalid URL → preview fails →
-        // importPaperclipCompany falls back to inlineImportPaperclipCompany with the correct caseId.
+        // If not set, use empty ref → buildGithubTreeUrl fails → importPaperclipCompany falls
+        // back to inline import using the caseId. This is acceptable for dev/demo deployments.
         const templateRef = hasValidRef ? rawTemplateRef! : "";
 
         // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
