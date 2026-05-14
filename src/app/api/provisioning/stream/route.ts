@@ -96,8 +96,8 @@ export async function GET(req: NextRequest) {
           let paperclipCompanyId: string | undefined;
           let instanceUrl: string | undefined;
 
-          const mockRawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-          const hasValidMockRef = mockRawTemplateRef && /^[0-9a-f]{40}$/i.test(mockRawTemplateRef);
+          const mockRawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF?.trim() ?? "";
+          const hasValidMockRef = /^[0-9a-f]{40}$/i.test(mockRawTemplateRef);
           if (!hasValidMockRef) {
             console.warn(`[Provisioning/mock] PAPERCLIP_TEMPLATE_REF='${mockRawTemplateRef ?? ""}' is not a 40-char SHA — using inline template fallback.`);
           }
@@ -403,18 +403,18 @@ export async function GET(req: NextRequest) {
           ? `learners-superpumped/paperclip-templates/${resolvedCaseId}`
           : "";
 
-        const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF;
-        const hasValidRef = rawTemplateRef && /^[0-9a-f]{40}$/i.test(rawTemplateRef);
-        if (rawTemplateRef && !hasValidRef) {
-          // B.2.I3: PAPERCLIP_TEMPLATE_REF is set but is not a valid 40-char SHA (e.g. a branch name).
-          // Hard-fail to prevent silent template drift — fix the Vercel env var.
+        const rawTemplateRef = process.env.PAPERCLIP_TEMPLATE_REF?.trim() ?? "";
+        const hasValidRef = /^[0-9a-f]{40}$/i.test(rawTemplateRef);
+        if (process.env.PAPERCLIP_TEMPLATE_REF && !hasValidRef) {
+          // B.2.I3: PAPERCLIP_TEMPLATE_REF is set but is not a valid 40-char SHA (e.g. a branch name
+          // or a value with trailing whitespace). Hard-fail to prevent silent template drift.
           send({ error: `PAPERCLIP_TEMPLATE_REF ('${rawTemplateRef}') must be a 40-char commit SHA, not a branch name. Update the Vercel env var to prevent template drift.` });
           controller.close();
           return;
         }
         // If not set, use empty ref → buildGithubTreeUrl fails → importPaperclipCompany falls
         // back to inline import using the caseId. This is acceptable for dev/demo deployments.
-        const templateRef = hasValidRef ? rawTemplateRef! : "";
+        const templateRef = hasValidRef ? rawTemplateRef : "";
 
         // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
         // Keep clean companyName for DB storage.
