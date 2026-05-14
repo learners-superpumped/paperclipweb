@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users, subscriptions, companies } from "@/db/schema";
 import { sendSubscriptionCancelledEmail } from "@/lib/agentmail";
+import { isProductionDeployment } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export const dynamic = "force-dynamic";
 // Authenticated via session (no CRON_SECRET needed).
 // Allows QA to verify 11.F5 (cancel flow: DB state, company stop, email, data retention).
 export async function POST() {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

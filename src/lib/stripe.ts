@@ -1,10 +1,11 @@
 import Stripe from "stripe";
+import { isStripeTestMode } from "@/lib/runtime-mode";
 
 let _stripe: Stripe | null = null;
 
 export function getStripe(): Stripe {
   if (!_stripe) {
-    const isTest = process.env.STRIPE_TEST_MODE === "true";
+    const isTest = isStripeTestMode();
     const key = isTest
       ? process.env.STRIPE_SECRET_KEY_TEST
       : process.env.STRIPE_SECRET_KEY;

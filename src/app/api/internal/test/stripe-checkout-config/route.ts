@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ensurePrice } from "@/lib/stripe-ensure";
 import { getStripe } from "@/lib/stripe";
 import { guardQaTestRoute } from "@/lib/qa-test-guard";
+import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,8 @@ export async function GET() {
   const blocked = await guardQaTestRoute();
   if (blocked) return blocked;
 
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTestMode = process.env.STRIPE_TEST_MODE === "true";
+  const isMock = isPaymentMockMode();
+  const isTestMode = isStripeTestMode();
   const hasTestKey = !!process.env.STRIPE_SECRET_KEY_TEST;
 
   const config = {

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { ensurePrice } from "@/lib/stripe-ensure";
 import { getStripe } from "@/lib/stripe";
+import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
 
 const PAPERCLIP_PRO_MONTHLY_LOOKUP = "paperclipweb_pro_monthly";
 
 export async function POST(req: Request) {
   const isStripeTestActive =
-    process.env.STRIPE_TEST_MODE === "true" && !!process.env.STRIPE_SECRET_KEY_TEST;
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true" && !isStripeTestActive;
+    isStripeTestMode() && !!process.env.STRIPE_SECRET_KEY_TEST;
+  const isMock = isPaymentMockMode() && !isStripeTestActive;
   if (isMock) {
     return NextResponse.json({ url: "/checkout/mock-success" });
   }

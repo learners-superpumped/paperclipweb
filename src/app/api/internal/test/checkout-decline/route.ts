@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { isProductionDeployment } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,10 @@ function containsRawStripeCode(msg: string): boolean {
 }
 
 export async function POST(req: Request) {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

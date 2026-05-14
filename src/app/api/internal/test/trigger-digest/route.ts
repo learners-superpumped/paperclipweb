@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users, companies, tasks, creditTransactions } from "@/db/schema";
 import { sendMonthlySummaryEmail } from "@/lib/agentmail";
+import { isProductionDeployment } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ export const dynamic = "force-dynamic";
 // Returns: { ok: true, email, month, actionsUsed }
 // Then check AgentMail inbox for the monthly summary email to verify 10.F7.
 export async function POST() {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

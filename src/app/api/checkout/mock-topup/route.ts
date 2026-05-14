@@ -4,8 +4,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users, creditTransactions } from "@/db/schema";
 import { TOPUP } from "@/lib/constants";
+import { isPaymentMockMode, isProductionDeployment, isStripeTestMode } from "@/lib/runtime-mode";
 
 export async function POST() {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const session = await auth();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -18,11 +23,11 @@ export async function POST() {
     .limit(1);
   if (!user) return NextResponse.json({ error: "no_user" }, { status: 404 });
 
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTest = process.env.STRIPE_TEST_MODE === "true";
+  const isMock = isPaymentMockMode();
+  const isTest = isStripeTestMode();
 
-  // In live mode: only allow when balance is at 0 (prevents free-credit abuse).
-  // In test/mock mode: always allow (QA needs to top up repeatedly).
+  // Non-production live mode: only allow when balance is at 0.
+  // Test/mock mode: always allow (QA needs to top up repeatedly).
   if (!isMock && !isTest && user.creditsBalance > 0) {
     return NextResponse.json(
       {

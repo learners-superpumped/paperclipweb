@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,8 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTest = process.env.STRIPE_TEST_MODE === "true";
+  const isMock = isPaymentMockMode();
+  const isTest = isStripeTestMode();
 
   return NextResponse.json({
     ok: true,

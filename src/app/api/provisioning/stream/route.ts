@@ -15,6 +15,7 @@ import {
 } from "@/lib/paperclip";
 import { sendCompanyReadyEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
+import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
         }
 
         // ── Mock payment session (PAPERCLIP_PAYMENT_MOCK=true) ──────────────────
-        if (sessionId.startsWith("mock_") && (process.env.PAPERCLIP_PAYMENT_MOCK === "true" || process.env.STRIPE_TEST_MODE === "true")) {
+        if (sessionId.startsWith("mock_") && (isPaymentMockMode() || isStripeTestMode())) {
           const slug = sessionId.slice(5);
 
           const [mockCompanyRow] = await db()

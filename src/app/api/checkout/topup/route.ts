@@ -6,6 +6,7 @@ import { users, creditTransactions, balances, balanceMovements } from "@/db/sche
 import { TOPUP } from "@/lib/constants";
 import { ensurePrice } from "@/lib/stripe-ensure";
 import { getStripe } from "@/lib/stripe";
+import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
 
 // spec.md § 6: single top-up option — $10 / 50 actions, applied instantly.
 // In test/mock mode: credits are added directly (no Stripe round-trip needed).
@@ -16,8 +17,8 @@ export async function POST() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const isMock = process.env.PAPERCLIP_PAYMENT_MOCK === "true";
-  const isTest = process.env.STRIPE_TEST_MODE === "true";
+  const isMock = isPaymentMockMode();
+  const isTest = isStripeTestMode();
 
   const email = session.user.email;
   const [user] = await db()

@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { sendCreditLowEmail } from "@/lib/agentmail";
 import { guardQaTestRoute } from "@/lib/qa-test-guard";
+import { isProductionDeployment } from "@/lib/runtime-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,10 @@ export const dynamic = "force-dynamic";
 //   Authorization: Bearer <CRON_SECRET>
 //   Body: { "email": "user@example.com", "threshold": 20 }
 export async function POST(req: Request) {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
   const headersList = await headers();
   const authHeader = headersList.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
