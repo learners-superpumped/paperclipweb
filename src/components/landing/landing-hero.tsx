@@ -17,7 +17,7 @@ export function LandingHero() {
           <p className="mt-6 text-lg text-secondary-700 sm:text-xl max-w-2xl mx-auto text-balance leading-relaxed">
             Pick a YouTube-validated AI business below,
             <br className="hidden sm:block" />
-            pay $29, and your company is live before you open the door.
+            try the template, then launch the real company when you are ready.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3">
@@ -32,7 +32,7 @@ export function LandingHero() {
               </Button>
             </a>
             <p className="text-sm text-secondary-700">
-              Pick a case below → pay $29 → company live in under 10 s
+              Pick a case below &gt; run a sample task &gt; launch for $29/month
             </p>
           </div>
         </div>

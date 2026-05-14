@@ -25,8 +25,8 @@ export function Navbar() {
                 Log in
               </Button>
             </Link>
-            <Link href="/signup">
-              <Button size="sm">Start now</Button>
+            <Link href="/#cases">
+              <Button size="sm">Try templates</Button>
             </Link>
           </div>
 
@@ -52,9 +52,9 @@ export function Navbar() {
                     Log in
                   </Button>
                 </Link>
-                <Link href="/signup" className="flex-1">
+                <Link href="/#cases" className="flex-1">
                   <Button size="sm" className="w-full">
-                    Start now
+                    Try templates
                   </Button>
                 </Link>
               </div>

@@ -1,42 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Check, Paperclip, Loader2 } from "lucide-react";
+import { Check, Paperclip } from "lucide-react";
 import { PLANS, TOPUP } from "@/lib/constants";
 import {
   trackPlanSelected,
-  trackCheckoutStarted,
   trackPricingView,
 } from "@/lib/analytics";
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState(false);
-
   useEffect(() => {
     trackPricingView("pricing_page");
   }, []);
 
-  const startCheckout = async () => {
+  const handleTryTemplate = () => {
     trackPlanSelected("pro", "pricing");
-    setLoading(true);
-    trackCheckoutStarted("pro", PLANS.pro.price);
-    try {
-      const res = await fetch("/api/checkout/public", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setLoading(false);
-      }
-    } catch {
-      setLoading(false);
-    }
   };
 
   return (
@@ -91,19 +71,11 @@ export default function PricingPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={loading}
-              onClick={startCheckout}
-              data-testid="cta-pro"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                PLANS.pro.cta
-              )}
-            </Button>
+            <Link href="/#cases" onClick={handleTryTemplate}>
+              <Button size="lg" className="w-full" data-testid="cta-pro">
+                {PLANS.pro.cta}
+              </Button>
+            </Link>
           </div>
 
           <div
@@ -134,7 +106,7 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-10 text-center text-sm text-secondary-700">
-          No free plan. Pick a template, pay $29, company is live instantly.
+          Try a template and sample task first. Checkout appears when you launch the real instance.
         </p>
       </div>
     </div>

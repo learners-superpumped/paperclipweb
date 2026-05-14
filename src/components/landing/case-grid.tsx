@@ -1,18 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import type { CaseTemplate } from "@/lib/cases";
-
-async function handleClone(caseId: string) {
-  const res = await fetch("/api/checkout/public", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ caseId }),
-  });
-  const data = await res.json() as { url?: string };
-  if (data.url) window.location.href = data.url;
-}
 
 export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
   return (
@@ -23,7 +14,7 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
             5 AI businesses people actually built on YouTube
           </h2>
           <p className="mt-3 text-secondary-700">
-            One click on a card and we'll clone that exact company for you.
+            Try the template first. Launch the real company only when it feels right.
           </p>
         </div>
 
@@ -62,12 +53,12 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                 </div>
               </div>
               <div className="mt-auto space-y-2">
-                <button
-                  onClick={() => handleClone(c.id)}
+                <Link
+                  href={`/onboarding/${c.id}`}
                   className={cn(buttonVariants({ size: "sm" }), "block text-center w-full cursor-pointer")}
                 >
-                  Clone this company
-                </button>
+                  Try this template
+                </Link>
                 <div className="space-y-1 pt-2 border-t border-secondary-100">
                   <div className="text-[11px] text-secondary-700 mb-1">
                     YouTube cases

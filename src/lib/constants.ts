@@ -31,7 +31,7 @@ export const PLANS = {
       "Email balance + alert automation",
       "User subdomain (<slug>.usepaperclip.app)",
     ] as readonly string[],
-    cta: "Start for $29",
+    cta: "Try a template first",
     popular: true,
   },
 } as const;
