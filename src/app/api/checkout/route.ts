@@ -48,6 +48,7 @@ export async function POST(req: Request) {
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "subscription",
     currency: "usd",
+    adaptive_pricing: { enabled: false },
     payment_method_types: ["card"],
     customer_email: email,
     line_items: [{ price: priceId, quantity: 1 }],

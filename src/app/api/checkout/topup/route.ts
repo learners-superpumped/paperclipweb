@@ -77,6 +77,7 @@ export async function POST() {
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
+    adaptive_pricing: { enabled: false },
     payment_method_types: ["card"],
     customer_email: email,
     line_items: [{ price: priceId, quantity: 1 }],
