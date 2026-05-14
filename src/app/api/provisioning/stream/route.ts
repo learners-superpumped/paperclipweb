@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
           // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
-            const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
+            const found = await pollForFirstWorkProduct(paperclipCompanyId, 5000);
             if (found) mockFirstHeartbeatAt = new Date();
           }
 
@@ -228,14 +228,19 @@ export async function GET(req: NextRequest) {
           isNewUser = true;
         }
 
-        // Check if company already provisioned (idempotent re-entry)
-        const existingCompanies = await db()
+        // Fetch ALL user companies to correctly detect archived (re-subscribe) and provisioned states.
+        // .limit(1) would miss archived company when webhook also created a new stub.
+        const allUserCompanies = await db()
           .select()
           .from(companies)
-          .where(eq(companies.userId, userId))
-          .limit(1);
+          .where(eq(companies.userId, userId));
 
-        const alreadyProvisioned = existingCompanies[0]?.paperclipCompanyId != null;
+        const runningCompany = allUserCompanies.find(
+          (c) => c.paperclipCompanyId != null && c.status === "running"
+        );
+        const alreadyProvisioned = !!runningCompany;
+        // Use first row for legacy compat (idempotency checks below still reference it)
+        const existingCompanies = allUserCompanies;
 
         if (!existingEvent[0]) {
           // Mark event processed (idempotency)
@@ -289,7 +294,8 @@ export async function GET(req: NextRequest) {
         }
 
         if (alreadyProvisioned && existingEvent[0]) {
-          const company = existingCompanies[0];
+          // Use runningCompany (has paperclipCompanyId) for idempotent re-entry
+          const company = runningCompany!;
           if (company.instanceUrl) {
             // Already fully provisioned — resend existing invite URL
             send({ step: "invite", label: "Sending you the keys…" });
@@ -441,7 +447,7 @@ export async function GET(req: NextRequest) {
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
-          const found = await pollForFirstWorkProduct(paperclipCompanyId, 28000);
+          const found = await pollForFirstWorkProduct(paperclipCompanyId, 5000);
           if (found) firstHeartbeatAt = new Date();
         }
 
@@ -452,22 +458,25 @@ export async function GET(req: NextRequest) {
           if (invite?.url) instanceUrl = invite.url;
         }
 
-        // Persist company record — update stub (from webhook) or insert fresh row
+        // Persist company record — update provisioning stub (from webhook) or insert fresh row.
+        // Use the provisioning stub if available; otherwise insert new.
+        const provisioningStub = allUserCompanies.find((c) => !c.paperclipCompanyId && c.status === "provisioning");
+        const targetCompany = provisioningStub ?? null;
         const slug = makeSlug(companyName);
-        if (existingCompanies[0]) {
+        if (targetCompany) {
           await db()
             .update(companies)
             .set({
               name: companyName,
-              caseId: resolvedCaseId || existingCompanies[0].caseId || undefined,
+              caseId: resolvedCaseId || targetCompany.caseId || undefined,
               ...(paperclipCompanyId ? { paperclipCompanyId } : {}),
               ...(instanceUrl ? { instanceUrl } : {}),
               paperclipVersion: templateRef,
               ...(firstHeartbeatAt ? { firstHeartbeatAt } : {}),
-              status: paperclipCompanyId ? "running" : existingCompanies[0].status,
+              status: paperclipCompanyId ? "running" : targetCompany.status,
               updatedAt: new Date(),
             })
-            .where(eq(companies.id, existingCompanies[0].id));
+            .where(eq(companies.id, targetCompany.id));
         } else {
           await db().insert(companies).values({
             userId,

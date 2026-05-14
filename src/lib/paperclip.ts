@@ -527,6 +527,21 @@ export async function deletePaperclipCompany(companyId: string): Promise<boolean
 }
 
 /**
+ * Extract issue array from paperclip API response.
+ * Handles both direct arrays and wrapped formats: { items, data, issues, results }.
+ */
+function extractIssueArray(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    for (const key of ["items", "data", "issues", "results"]) {
+      if (Array.isArray(obj[key])) return obj[key] as unknown[];
+    }
+  }
+  return [];
+}
+
+/**
  * Poll until an in-progress issue/work product appears for a company, or timeout.
  */
 export async function pollForFirstWorkProduct(
@@ -534,7 +549,7 @@ export async function pollForFirstWorkProduct(
   timeoutMs: number
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
-  // Check both in-progress (agent actively running) and todo (assigned, heartbeat pending).
+  // Check in-progress (agent actively running) and todo (assigned, heartbeat pending).
   const statuses = ["in-progress", "todo"];
   while (Date.now() < deadline) {
     try {
@@ -542,13 +557,19 @@ export async function pollForFirstWorkProduct(
         const res = await paperclipFetch(`/api/companies/${paperclipCompanyId}/issues?status=${status}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) return true;
+          if (extractIssueArray(data).length > 0) return true;
         }
+      }
+      // Fallback: check all issues (no status filter) in case status param format differs
+      const allRes = await paperclipFetch(`/api/companies/${paperclipCompanyId}/issues`);
+      if (allRes.ok) {
+        const allData = await allRes.json();
+        if (extractIssueArray(allData).length > 0) return true;
       }
     } catch {
       // Ignore transient errors and keep polling
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 1000));
   }
   return false;
 }

@@ -140,20 +140,35 @@ export async function POST(req: Request) {
 
             // Grant $9 LLM credit balance — reset on re-subscribe (onConflictDoUpdate).
             // Provisioning stream also resets for re-subscribe; both set to same value (idempotent).
-            await tx.insert(balances).values({ userId: resolvedUserId, dollars: "9.0000" }).onConflictDoUpdate({
+            const [newPubBalance] = await tx.insert(balances).values({ userId: resolvedUserId, dollars: "9.0000" }).onConflictDoUpdate({
               target: balances.userId,
               set: { dollars: "9.0000", updatedAt: new Date() },
-            });
+            }).returning();
+            if (newPubBalance) {
+              await tx.insert(balanceMovements).values({
+                userId: resolvedUserId,
+                kind: "grant",
+                dollarsDelta: "9.0000",
+                reference: event.id,
+              });
+            }
 
-            // Company stub — provisioning stream will update with paperclipCompanyId/instanceUrl
-            await tx.insert(companies).values({
-              userId: resolvedUserId,
-              name: pubCompanyName,
-              slug: pubSlug,
-              caseId: pubCaseId || undefined,
-              legacyMode: false,
-              status: "provisioning",
-            }).onConflictDoNothing();
+            // Company stub — provisioning stream will update with paperclipCompanyId/instanceUrl.
+            // Skip if user already has a company to avoid orphan stubs on re-subscribe.
+            const [existingCompanyRow] = await tx.select({ id: companies.id })
+              .from(companies)
+              .where(eq(companies.userId, resolvedUserId))
+              .limit(1);
+            if (!existingCompanyRow) {
+              await tx.insert(companies).values({
+                userId: resolvedUserId,
+                name: pubCompanyName,
+                slug: pubSlug,
+                caseId: pubCaseId || undefined,
+                legacyMode: false,
+                status: "provisioning",
+              }).onConflictDoNothing();
+            }
           });
 
           break;
@@ -164,7 +179,16 @@ export async function POST(req: Request) {
           const planCredits = PLAN_CREDITS[plan] ?? PLAN_CREDITS.free;
           const price = PLAN_PRICES[plan] ?? 0;
 
-          // Atomically create subscription + update user + record credit transaction + grant $9 LLM balance
+          // B.1.I3: compute company name before transaction so it's available inside.
+          const sessionCaseId = session.metadata?.caseId ?? "";
+          let authCompanyName = "My AI Company";
+          if (sessionCaseId) {
+            const tmpl = findCase(sessionCaseId);
+            if (tmpl?.company) authCompanyName = tmpl.company;
+          }
+          const authCompanySlug = makeWebhookSlug(authCompanyName);
+
+          // Atomically create subscription + update user + credit transaction + balance + company stub
           await db().transaction(async (tx) => {
             await tx.insert(subscriptions).values({
               userId,
@@ -205,6 +229,22 @@ export async function POST(req: Request) {
               dollarsDelta: "9.0000",
               reference: session.id,
             });
+
+            // B.1.I3: company stub inside transaction — skip if user already has a company.
+            const [existingAuthCompany] = await tx.select({ id: companies.id })
+              .from(companies)
+              .where(eq(companies.userId, userId))
+              .limit(1);
+            if (!existingAuthCompany) {
+              await tx.insert(companies).values({
+                userId,
+                name: authCompanyName,
+                slug: authCompanySlug,
+                caseId: sessionCaseId || undefined,
+                legacyMode: false,
+                status: "provisioning",
+              }).onConflictDoNothing();
+            }
           });
 
           // Amplitude: checkout_completed
@@ -218,28 +258,6 @@ export async function POST(req: Request) {
           await notifySlack(
             `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
           );
-
-          // Create company stub so B.1.I3 row exists within 5s.
-          // Provisioning stream handles template import + paperclipCompanyId (avoids B.1.I2 duplicate).
-          try {
-            const sessionCaseId = session.metadata?.caseId ?? "";
-            let companyName = "My AI Company";
-            if (sessionCaseId) {
-              const tmpl = findCase(sessionCaseId);
-              if (tmpl?.company) companyName = tmpl.company;
-            }
-            const slug = makeWebhookSlug(companyName);
-            await db().insert(companies).values({
-              userId,
-              name: companyName,
-              slug,
-              caseId: sessionCaseId || undefined,
-              legacyMode: false,
-              status: "provisioning",
-            }).onConflictDoNothing();
-          } catch (err) {
-            console.error("[Webhook] Failed to create company stub:", err);
-          }
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed
           const credits = parseInt(topupCredits, 10);
