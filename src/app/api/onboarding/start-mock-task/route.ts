@@ -14,10 +14,12 @@ type RateLimitBucket = {
 type TrialCacheEntry = {
   result: string;
   createdAt: number;
+  model?: string;
 };
 
 const rateLimits = new Map<string, RateLimitBucket>();
 const trialCache = new Map<string, TrialCacheEntry>();
+let workingTrialModel: string | undefined;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 8;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -56,6 +58,21 @@ function textFromAnthropicResponse(data: unknown): string {
     .trim();
 }
 
+function trialModelCandidates(): string[] {
+  return Array.from(
+    new Set(
+      [
+        workingTrialModel,
+        process.env.ANTHROPIC_TRIAL_MODEL,
+        "claude-3-haiku-20240307",
+        "claude-3-5-haiku-20241022",
+        "claude-sonnet-4-20250514",
+        "claude-3-7-sonnet-20250219",
+      ].filter((model): model is string => Boolean(model))
+    )
+  );
+}
+
 export async function POST(req: Request) {
   const key = clientKey(req);
   if (!checkRateLimit(key)) {
@@ -77,7 +94,7 @@ export async function POST(req: Request) {
   const now = Date.now();
   const cached = trialCache.get(template.id);
   if (cached && now - cached.createdAt < CACHE_TTL_MS) {
-    return NextResponse.json({ ok: true, result: cached.result, source: "cache" });
+    return NextResponse.json({ ok: true, result: cached.result, source: "cache", model: cached.model });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -86,7 +103,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    const model = process.env.ANTHROPIC_TRIAL_MODEL || "claude-3-5-haiku-20241022";
     const prompt = [
       `Company: ${template.company}`,
       `Mission: ${template.mission}`,
@@ -96,30 +112,43 @@ export async function POST(req: Request) {
       "Generate the user's sample task output. Be concrete, useful, and formatted in Markdown. Do not mention that this is a demo.",
     ].join("\n\n");
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 900,
-        temperature: 0.7,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    for (const model of trialModelCandidates()) {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 900,
+          temperature: 0.7,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error("[onboarding/start-mock-task] Anthropic failed:", res.status, errText.slice(0, 300));
-      return NextResponse.json({ ok: true, result: template.sampleTask.presetResult, source: "preset" });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error(
+          "[onboarding/start-mock-task] Anthropic failed:",
+          model,
+          res.status,
+          errText.slice(0, 300)
+        );
+        if (res.status === 404 || res.status === 400) {
+          continue;
+        }
+        return NextResponse.json({ ok: true, result: template.sampleTask.presetResult, source: "preset" });
+      }
+
+      const result = textFromAnthropicResponse(await res.json()) || template.sampleTask.presetResult;
+      workingTrialModel = model;
+      trialCache.set(template.id, { result, createdAt: now, model });
+      return NextResponse.json({ ok: true, result, source: "ai", model });
     }
 
-    const result = textFromAnthropicResponse(await res.json()) || template.sampleTask.presetResult;
-    trialCache.set(template.id, { result, createdAt: now });
-    return NextResponse.json({ ok: true, result, source: "ai" });
+    return NextResponse.json({ ok: true, result: template.sampleTask.presetResult, source: "preset" });
   } catch (err) {
     console.error("[onboarding/start-mock-task] failed:", err);
     return NextResponse.json({ ok: true, result: template.sampleTask.presetResult, source: "preset" });
