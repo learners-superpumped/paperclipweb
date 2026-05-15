@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const model = process.env.ANTHROPIC_TRIAL_MODEL || "claude-3-5-haiku-latest";
+    const model = process.env.ANTHROPIC_TRIAL_MODEL || "claude-3-5-haiku-20241022";
     const prompt = [
       `Company: ${template.company}`,
       `Mission: ${template.mission}`,
