@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, PLAN_CREDITS } from "@/lib/stripe";
 import { db } from "@/db";
 import { users, subscriptions, companies, stripeEvents, balances, balanceMovements } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -211,7 +211,6 @@ export async function GET(req: NextRequest) {
           .limit(1);
 
         let userId: string;
-        let isNewUser = false;
 
         if (existingUsers[0]) {
           userId = existingUsers[0].id;
@@ -224,9 +223,8 @@ export async function GET(req: NextRequest) {
               creditsBalance: 100,
               creditsLimit: 100,
             })
-            .returning();
+              .returning();
           userId = newUser.id;
-          isNewUser = true;
         }
 
         // Fetch ALL user companies to correctly detect archived (re-subscribe) and provisioned states.
@@ -269,12 +267,19 @@ export async function GET(req: NextRequest) {
               .onConflictDoNothing();
           }
 
-          if (isNewUser) {
-            await db()
-              .update(users)
-              .set({ plan: "pro", stripeCustomerId: stripeSession.customer as string ?? undefined })
-              .where(eq(users.id, userId));
-          }
+          const planCredits = PLAN_CREDITS.pro;
+          await db()
+            .update(users)
+            .set({
+              plan: "pro",
+              creditsBalance: planCredits.balance,
+              creditsLimit: planCredits.limit,
+              ...(typeof stripeSession.customer === "string"
+                ? { stripeCustomerId: stripeSession.customer }
+                : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId));
 
           // Grant $9 LLM credit balance. Only record movement if balance was newly created —
           // prevents duplicate grant movement when webhook already granted it (e.g. authenticated checkout).

@@ -12,13 +12,29 @@ type TrialPhase = "ready" | "running" | "result";
 
 export function TemplateTrial({ template }: { template: CaseTemplate }) {
   const [phase, setPhase] = useState<TrialPhase>("ready");
+  const [result, setResult] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runSampleTask = () => {
+  const runSampleTask = async () => {
     setError(null);
     setPhase("running");
-    window.setTimeout(() => setPhase("result"), 1200);
+    try {
+      const res = await fetch("/api/onboarding/start-mock-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId: template.id }),
+      });
+      const data = (await res.json()) as { result?: string; error?: string };
+      if (!res.ok || !data.result) {
+        throw new Error(data.error || "The sample task could not be completed.");
+      }
+      setResult(data.result);
+      setPhase("result");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The sample task could not be completed.");
+      setPhase("ready");
+    }
   };
 
   const startCheckout = async () => {
@@ -139,6 +155,12 @@ export function TemplateTrial({ template }: { template: CaseTemplate }) {
                 </Button>
               )}
 
+              {error && phase === "ready" && (
+                <div className="mt-4 rounded-md border border-destructive/30 bg-destructive-50 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
               {phase === "running" && (
                 <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center gap-3 text-sm font-medium text-secondary-800">
@@ -163,7 +185,7 @@ export function TemplateTrial({ template }: { template: CaseTemplate }) {
                     className="max-h-[460px] overflow-auto whitespace-pre-wrap rounded-md bg-secondary-50 p-4 text-sm leading-7 text-secondary-800"
                     data-testid="task-result"
                   >
-                    {template.sampleTask.presetResult}
+                    {result}
                   </div>
                 </div>
 

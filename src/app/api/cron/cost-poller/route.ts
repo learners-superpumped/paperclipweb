@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { companies, balances, balanceMovements, costEventsMirror, users } from "@/db/schema";
-import { eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { eq, isNotNull, sql } from "drizzle-orm";
 import { syncCompanyBudget, pollForFirstWorkProduct } from "@/lib/paperclip";
 import { sendCreditLowEmail } from "@/lib/agentmail";
 
@@ -44,7 +44,7 @@ async function fetchFinanceEvents(
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

@@ -69,11 +69,6 @@ export async function POST(req: Request) {
     if (alreadyProcessed[0]) {
       return NextResponse.json({ received: true, skipped: true });
     }
-    await db().insert(stripeEvents).values({
-      stripeEventId: event.id,
-      type: event.type,
-    }).onConflictDoNothing();
-
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -197,7 +192,7 @@ export async function POST(req: Request) {
               status: "active",
               currentPeriodStart: new Date(),
               currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            });
+            }).onConflictDoNothing();
 
             await tx
               .update(users)
@@ -247,17 +242,22 @@ export async function POST(req: Request) {
             }
           });
 
-          // Amplitude: checkout_completed
-          await trackServerCheckoutCompleted(
-            userId,
-            plan,
-            price,
-            session.subscription as string
-          );
+          try {
+            await trackServerCheckoutCompleted(
+              userId,
+              plan,
+              price,
+              session.subscription as string
+            );
+          } catch (err) {
+            console.error("[Webhook] checkout_completed analytics failed:", err);
+          }
 
           await notifySlack(
             `[paperclipweb] New ${plan} subscription! User: ${userId}, Amount: $${price}/mo`
-          );
+          ).catch((err) => {
+            console.error("[Webhook] checkout_completed Slack failed:", err);
+          });
         } else if (topupPackage && topupCredits) {
           // Top-up purchase completed
           const credits = parseInt(topupCredits, 10);
@@ -304,12 +304,17 @@ export async function POST(req: Request) {
             // Non-fatal
           }
 
-          // Amplitude: credits_topped_up
-          await trackServerCreditsToppedUp(userId, topupPackage, credits, price);
+          try {
+            await trackServerCreditsToppedUp(userId, topupPackage, credits, price);
+          } catch (err) {
+            console.error("[Webhook] credits_topped_up analytics failed:", err);
+          }
 
           await notifySlack(
             `[paperclipweb] Credit top-up! User: ${userId}, Package: ${topupPackage}, Credits: ${credits}`
-          );
+          ).catch((err) => {
+            console.error("[Webhook] credits_topped_up Slack failed:", err);
+          });
         }
         break;
       }
@@ -348,11 +353,11 @@ export async function POST(req: Request) {
             })
             .where(eq(users.id, user.id));
 
-          await addCreditTransaction({
+          await db().insert(creditTransactions).values({
             userId: user.id,
             amount: planCredits.balance,
             type: "subscription",
-            description: `Monthly credit renewal: +${planCredits.balance} credits`,
+            description: `Monthly credit renewal: ${planCredits.balance} credits`,
           });
         }
         break;
@@ -418,15 +423,25 @@ export async function POST(req: Request) {
           console.error("[Webhook] Failed to send cancellation email:", err);
         }
 
-        // Amplitude: subscription_cancel
-        await trackServerSubscriptionCanceled(user.id, previousPlan);
+        try {
+          await trackServerSubscriptionCanceled(user.id, previousPlan);
+        } catch (err) {
+          console.error("[Webhook] subscription_cancel analytics failed:", err);
+        }
 
         await notifySlack(
           `[paperclipweb] Subscription canceled. User: ${user.id}, Previous plan: ${previousPlan}`
-        );
+        ).catch((err) => {
+          console.error("[Webhook] subscription_cancel Slack failed:", err);
+        });
         break;
       }
     }
+
+    await db().insert(stripeEvents).values({
+      stripeEventId: event.id,
+      type: event.type,
+    }).onConflictDoNothing();
   } catch (error) {
     console.error("[Webhook] Processing error:", error);
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
