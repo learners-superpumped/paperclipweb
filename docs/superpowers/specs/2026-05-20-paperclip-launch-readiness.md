@@ -87,3 +87,20 @@ Stripe LIVE 전환 · webhook · price 검증 · mock/test 잔재 제거. 엔진
 
 ### 잠재 하드 블로커
 - Stripe 계정 라이브 활성화 — `sk_live_` 키 보유 ≠ 계정이 실결제 수락 가능 상태(사업자·은행 인증). 미활성 시 실결제 실패. 활성화는 사용자만 가능.
+
+## Phase 2-3 결과 (2026-05-20)
+
+### Phase 2 — env 변수 통일 (완료, 배포됨 `f2ead39`)
+checkout·provisioning 의 `NEXT_PUBLIC_BASE_URL`(미정의) → `NEXT_PUBLIC_APP_URL` 5파일 통일.
+
+### Phase 3 — production 의존성 검증
+- ✅ Stripe LIVE 계정 `acct_1OzL6yCKrRNmQd8t` (US/USD): `charges_enabled`·`payouts_enabled`·`details_submitted` 전부 true. **위 '잠재 하드 블로커'(계정 활성화) 해소 — 실결제 수락 가능 상태 확인됨.** Pro $29/mo price(`price_1TWwvC…`, 2900 USD/month) 활성.
+- ✅ paperclip 엔진 `paperclip-engine-aicompany.fly.dev` 가동 중.
+- ✅ 프로덕션 런타임 에러 0건 (48h).
+
+### 🔴→✅ 실제 런칭 블로커: Stripe webhook 미등록
+- **발견:** LIVE Stripe 계정에 paperclipweb webhook endpoint 부재 (gstackweb·digestly 것만 존재). → 구독 갱신(`invoice.paid`)·취소(`customer.subscription.deleted`)가 처리 불가. Vercel 의 `STRIPE_WEBHOOK_SECRET` 는 endpoint 없는 stale 값이었음.
+- **수정:** webhook endpoint `we_1TZ49pCKrRNmQd8tRSRD7Wbj` 생성 (`https://usepaperclip.app/api/stripe/webhook`, events: `checkout.session.completed`·`invoice.paid`·`customer.subscription.deleted`). 새 `whsec_` 시크릿을 Vercel prod env(업데이트) + `vault/projects/paperclip/keys.json` 동기화. 재배포로 반영.
+
+### 남은 검증
+- 실 $29 결제 1건으로 결제 → webhook → 프로비저닝 전 구간 확정 (실 거래 필요 — 자율 실행 범위 밖).
