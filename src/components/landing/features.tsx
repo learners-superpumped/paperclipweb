@@ -29,7 +29,7 @@ export function Features() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center mb-16">
           <h2 className="text-3xl font-bold text-secondary-800 sm:text-4xl">
-            Why paperclipweb?
+            Why paperclip?
           </h2>
           <p className="mt-4 text-lg text-secondary-500">
             We simplify the complexity of Railway + API key management into one platform
@@ -79,7 +79,7 @@ export function Features() {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
-                After: paperclipweb
+                After: paperclip
               </h3>
               <ul className="space-y-3 text-sm text-secondary-600">
                 <li className="flex items-start gap-2">

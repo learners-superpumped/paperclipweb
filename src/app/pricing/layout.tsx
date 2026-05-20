@@ -8,9 +8,9 @@ export const metadata: Metadata = {
     canonical: "/pricing",
   },
   openGraph: {
-    title: "paperclipweb Pricing — One bill, bundled AI credits",
+    title: "paperclip Pricing — One bill, bundled AI credits",
     description:
-      "Free, Starter ($19/mo), and Pro ($49/mo) plans. AI credits and managed Paperclip hosting in one bill.",
+      "Pro at $29/mo — $9 LLM credit, one managed Paperclip instance, and email balance alerts. Top up $10 anytime.",
     url: "/pricing",
   },
 };

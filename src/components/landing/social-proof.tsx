@@ -19,13 +19,13 @@ const TWEETS = [
   {
     author: "@devtoolsfan",
     handle: "DevTools Fan",
-    text: "Open source, self-hostable, OR managed hosting with paperclipweb. Best of both worlds for AI agent orchestration.",
+    text: "Open source, self-hostable, OR managed hosting with Paperclip. Best of both worlds for AI agent orchestration.",
     avatar: "D",
   },
   {
     author: "@startupkr",
     handle: "Startup KR",
-    text: "From zero to AI-powered outbound in 60 seconds. paperclipweb is what I wished existed when I started my SaaS.",
+    text: "From zero to AI-powered outbound in 60 seconds. Paperclip is what I wished existed when I started my SaaS.",
     avatar: "K",
   },
 ];

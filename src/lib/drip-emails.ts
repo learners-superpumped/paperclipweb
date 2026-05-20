@@ -16,7 +16,7 @@ function wrap(content: string) {
     <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
       ${content}
       <p style="color: #94A3B8; font-size: 12px; margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px;">
-        paperclipweb -- One bill. One click. Your AI company.
+        paperclip -- One bill. One click. Your AI company.
       </p>
     </div>
   `;

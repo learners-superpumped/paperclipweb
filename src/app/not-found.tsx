@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="text-center">
         <div className="inline-flex items-center gap-2 mb-8">
           <Paperclip className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold text-secondary-800">paperclipweb</span>
+          <span className="text-xl font-bold text-secondary-800">paperclip</span>
         </div>
         <h1 className="text-6xl font-bold text-secondary-800 mb-4">404</h1>
         <p className="text-lg text-secondary-500 mb-8">

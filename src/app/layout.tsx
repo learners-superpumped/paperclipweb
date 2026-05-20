@@ -12,10 +12,10 @@ const inter = Inter({
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL || "https://usepaperclip.app";
-const SITE_NAME = "paperclipweb";
+const SITE_NAME = "paperclip";
 const SITE_TAGLINE = "Run your AI company with one bill";
 const SITE_DESCRIPTION =
-  "paperclipweb is managed Paperclip hosting with bundled AI credits. One bill, one click, your AI company — deploy autonomous AI agents in 60 seconds without juggling Anthropic, OpenAI, or Railway bills.";
+  "Managed Paperclip hosting with bundled AI credits. One bill, one click, your AI company — deploy autonomous AI agents in 60 seconds without juggling Anthropic, OpenAI, or Railway bills.";
 const SITE_DESCRIPTION_LONG =
   "Hire an AI team and run a business on its own. Clone a YouTube-validated AI company in 5 minutes, then spin up the real instance with one click — bundled actions, real-time balance, top up anytime.";
 
@@ -39,9 +39,9 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
-  authors: [{ name: "paperclipweb", url: SITE_URL }],
-  creator: "paperclipweb",
-  publisher: "paperclipweb",
+  authors: [{ name: "paperclip", url: SITE_URL }],
+  creator: "paperclip",
+  publisher: "paperclip",
   category: "technology",
   keywords: [
     // English — product

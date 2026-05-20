@@ -124,7 +124,7 @@ export default function LoginPage() {
           <Link href="/" className="inline-flex items-center gap-2 cursor-pointer mb-8">
             <Paperclip className="h-6 w-6 text-primary" />
             <span className="text-lg font-bold text-secondary-800">
-              paperclipweb
+              paperclip
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-800">

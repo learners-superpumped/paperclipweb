@@ -49,15 +49,15 @@ export async function sendEmail({ to, subject, body, bodyType = "html" }: SendEm
 export async function sendMagicLinkEmail(to: string, url: string) {
   return sendEmail({
     to,
-    subject: "Sign in to paperclipweb",
+    subject: "Sign in to paperclip",
     body: `
       <div style="max-width: 480px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px;">
-        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Sign in to paperclipweb</h2>
+        <h2 style="color: #0F172A; font-size: 24px; margin-bottom: 16px;">Sign in to paperclip</h2>
         <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
           Click the button below to sign in to your account. This link expires in 24 hours.
         </p>
         <a href="${url}" style="display: inline-block; background-color: #4F46E5; color: white; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600;">
-          Sign in to paperclipweb
+          Sign in to paperclip
         </a>
         <p style="color: #94A3B8; font-size: 12px; margin-top: 32px; line-height: 1.6;">
           If you did not request this email, you can safely ignore it.
