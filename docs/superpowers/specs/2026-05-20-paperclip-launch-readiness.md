@@ -147,3 +147,45 @@ subscription=active (`sub_1TZ5Im…`), $9 크레딧 grant. **전 구간 동작 �
 **제품 핵심 플로우 동작 확정, production 라이브.** usepaperclip.app 가입→결제
 →프로비저닝→작동하는 AI 회사 인스턴스까지 검증됨. 실 LIVE 결제 1건만 사용자가
 원할 때 확인하면 100%.
+
+## 엔진 에이전트 실행 복구 (2026-05-20)
+
+### 🔴→✅ 진짜 제품 블로커: 프로비저닝된 회사의 AI 에이전트가 작동 안 함
+"유저가 paperclip 으로 서비스를 디벨롭할 수 있나?" 검증 중 발견. 펀널
+(가입·결제·프로비저닝)은 되는데 **정작 AI 회사가 일을 안 함** — 엔진 29개
+회사가 최대 1주일간 진행된 작업 0건, non-idle 에이전트 0건.
+
+엔진 SSH 직접 진단으로 2단 원인 규명:
+1. **에이전트 어댑터 미설정** — 템플릿 import 로 생성된 에이전트는
+   `adapterType="process"` 인데 `command` 가 없음 → 모든 heartbeat run 이
+   `"Process adapter missing command"` 로 즉시 실패. 엔진엔 `claude`·`codex`
+   CLI 와 `claude_local`·`codex_local` 어댑터가 설치돼 있는데 안 쓰임.
+2. **시드 태스크가 backlog 정체** — heartbeat 스케줄러(기본 on)는 `todo`·
+   assigned 이슈만 처리, `backlog` 는 무시.
+
+### 수정 (배포됨 `67ff9b1`)
+provisioning/stream 에 `activateCompany` 헬퍼 추가 (real·mock 공통):
+- 각 에이전트를 `claude_local` 어댑터로 전환 + per-agent heartbeat 활성화
+  (`configureAgentForWork`).
+- 시드 태스크를 `backlog`→`todo` 승격 (`listCompanyIssues`,
+  `promoteIssueToTodo`).
+- 에이전트 즉시 kick (`wakeupAgent`).
+
+### 검증
+- 단건 테스트: 에이전트를 `claude_local` 로 바꾸자 실제 `claude` CLI 로
+  ~900단어 SEO 블로그 글을 작성·납품, 이슈 `done`.
+- 자율 경로: `claude_local`+heartbeat+`todo` 만으로 스케줄러가 수동 개입
+  없이 에이전트 실행(20초 내 `in_progress`).
+- 전체 E2E: 수정된 provisioning 으로 새 결제→프로비저닝. 새 회사 에이전트
+  3개 전부 `claude_local`+heartbeat, 시드 태스크가 개입 없이
+  `in_progress`→`done` (~40초). **유저가 받는 회사가 실제로 일을 함.**
+
+### 알려진 후속
+- 기존 29개 (전부 테스트) 회사는 옛 `process` 에이전트 그대로 — 신규
+  가입만 수정 적용. 실 유저 없으니 무방.
+- 엔진 `server.log` 가 744MB 단일 파일 — 로테이션 없음. 디스크 풀 재발
+  방지 위해 로그 로테이션 권장.
+
+### 최종 결론
+**유저가 paperclip 으로 실제 서비스를 디벨롭할 수 있음 — 확정.** 가입→결제
+→프로비저닝→작동하는 AI 직원이 자율적으로 태스크 수행까지 전 구간 검증.
