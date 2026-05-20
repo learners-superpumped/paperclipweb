@@ -92,21 +92,21 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — One bill. One click. Your AI company.`,
+    title: `${SITE_NAME} — Launch Your AI Company. No infra needed.`,
     description: SITE_DESCRIPTION,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "paperclip — AI 직원 채용해서 자동으로 돈 버는 회사",
+        alt: "paperclip — Launch Your AI Company. No infra needed.",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — One bill. One click. Your AI company.`,
+    title: `${SITE_NAME} — Launch Your AI Company. No infra needed.`,
     description:
       "Managed Paperclip hosting with bundled AI credits. Deploy autonomous AI agents in 60 seconds.",
     images: ["/opengraph-image"],
@@ -125,10 +125,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-video-preview": -1,
     },
-  },
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: ["/icon.svg"],
   },
   manifest: "/manifest.webmanifest",
   verification: {
@@ -160,7 +156,7 @@ const websiteLd = {
   name: SITE_NAME,
   url: SITE_URL,
   description: SITE_DESCRIPTION,
-  inLanguage: ["en", "ko"],
+  inLanguage: ["en"],
   publisher: {
     "@type": "Organization",
     name: SITE_NAME,

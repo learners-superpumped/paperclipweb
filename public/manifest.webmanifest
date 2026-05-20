@@ -1,13 +1,13 @@
 {
-  "name": "paperclip — AI 회사 호스팅",
+  "name": "paperclip — Launch Your AI Company",
   "short_name": "paperclip",
-  "description": "유튜브에서 본 AI 자동화 회사를 5분 만에 따라 만들고, 결제 한 번에 진짜 인스턴스를 띄우세요.",
+  "description": "Launch your AI company in minutes — users, payments, and email wired up with just Stripe.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4F46E5",
-  "lang": "ko",
+  "lang": "en",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -21,12 +21,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ]
 }
