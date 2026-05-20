@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
             .values({ userId, dollars: "9.0000" })
             .onConflictDoNothing();
 
-          const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+          const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
 
           // Already provisioned — redirect immediately without re-running steps.
           if (mockCompanyRow.paperclipCompanyId) {
@@ -312,7 +312,7 @@ export async function GET(req: NextRequest) {
           // Company provisioned but no instanceUrl (partial failure on prior run) — create new invite
           if (company.paperclipCompanyId) {
             send({ step: "invite", label: "Sending you the keys…" });
-            const BASE_URL_RETRY = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+            const BASE_URL_RETRY = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
             const retryInvite = await createCompanyInvite(company.paperclipCompanyId, "owner");
             const retryUrl = retryInvite?.url ?? `${BASE_URL_RETRY}/account`;
             if (retryInvite?.url) {
@@ -356,7 +356,7 @@ export async function GET(req: NextRequest) {
           send({ step: "invite", label: "Sending you the keys…" });
 
           const restoredInvite = await createCompanyInvite(archivedCompany.paperclipCompanyId, "owner");
-          const restoredUrl = restoredInvite?.url ?? `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/account`;
+          const restoredUrl = restoredInvite?.url ?? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app"}/account`;
 
           if (restoredInvite?.url) {
             try {
@@ -398,7 +398,7 @@ export async function GET(req: NextRequest) {
             }).onConflictDoNothing();
           }
 
-          const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+          const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
           send({ done: true, url: `${BASE_URL}/account` });
           controller.close();
           return;
@@ -507,7 +507,7 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
         const redirectUrl = instanceUrl ?? `${BASE_URL}/account`;
         send({ done: true, url: redirectUrl });
         controller.close();

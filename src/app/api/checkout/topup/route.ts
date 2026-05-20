@@ -75,7 +75,7 @@ export async function POST() {
   });
 
   const stripe = getStripe();
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
     adaptive_pricing: { enabled: false },

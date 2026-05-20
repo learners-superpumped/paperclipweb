@@ -43,7 +43,7 @@ export async function GET() {
       const price = await stripe.prices.retrieve(priceId);
       const product = await stripe.products.retrieve(price.product as string);
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: "subscription",
         payment_method_types: ["card"],

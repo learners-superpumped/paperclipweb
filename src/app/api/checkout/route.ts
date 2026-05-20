@@ -53,8 +53,8 @@ export async function POST(req: Request) {
     payment_method_types: ["card"],
     customer_email: email,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/provisioning?session_id={CHECKOUT_SESSION_ID}&caseId=${caseId ?? ""}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app"}/checkout/cancel?reason=declined`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app"}/provisioning?session_id={CHECKOUT_SESSION_ID}&caseId=${caseId ?? ""}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app"}/checkout/cancel?reason=declined`,
     metadata: {
       userId: user.id,
       caseId: caseId ?? "",

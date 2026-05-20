@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     interval: "month",
   });
 
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://usepaperclip.app";
+  const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";
   const stripe = getStripe();
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "subscription",
