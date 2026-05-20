@@ -598,6 +598,96 @@ export async function resumeAgent(agentId: string): Promise<boolean> {
 }
 
 /**
+ * Put an imported agent into a runnable state.
+ *
+ * Agents imported from a template arrive with the bare "process" adapter and no
+ * command — they fail every run with "Process adapter missing command" and can
+ * never do work. Switch them to the `claude_local` adapter (the engine ships the
+ * `claude` CLI) and enable the heartbeat so the engine's scheduler keeps the
+ * agent working on its own. Without this a paid customer's AI company sits idle.
+ */
+export async function configureAgentForWork(agentId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/agents/${agentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        adapterType: "claude_local",
+        runtimeConfig: { heartbeat: { enabled: true, maxConcurrentRuns: 20 } },
+      }),
+    });
+    if (!res.ok) {
+      console.error(
+        "[Paperclip] configureAgentForWork failed:",
+        agentId,
+        res.status,
+        await res.text().catch(() => ""),
+      );
+    }
+    return res.ok;
+  } catch (err) {
+    console.error("[Paperclip] configureAgentForWork error:", err);
+    return false;
+  }
+}
+
+/**
+ * Trigger an immediate heartbeat run for an agent so work starts now instead of
+ * waiting for the next scheduler tick.
+ */
+export async function wakeupAgent(agentId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/agents/${agentId}/wakeup`, {
+      method: "POST",
+      body: JSON.stringify({ source: "on_demand", triggerDetail: "manual" }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * List a company's issues as { id, status } pairs.
+ */
+export async function listCompanyIssues(
+  companyId: string,
+): Promise<Array<{ id: string; status: string }>> {
+  try {
+    const res = await paperclipFetch(`/api/companies/${companyId}/issues`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const out: Array<{ id: string; status: string }> = [];
+    for (const raw of extractIssueArray(data)) {
+      if (raw && typeof raw === "object") {
+        const o = raw as Record<string, unknown>;
+        if (typeof o.id === "string") {
+          out.push({ id: o.id, status: typeof o.status === "string" ? o.status : "" });
+        }
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Promote a backlog issue to "todo" so an agent's heartbeat picks it up.
+ * Imported template tasks land in "backlog", which the scheduler ignores.
+ */
+export async function promoteIssueToTodo(issueId: string): Promise<boolean> {
+  try {
+    const res = await paperclipFetch(`/api/issues/${issueId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "todo" }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Sync the monthly budget for a company based on current dollar balance.
  */
 export async function syncCompanyBudget(

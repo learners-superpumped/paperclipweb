@@ -10,6 +10,10 @@ import {
   listCompanyAgents,
   approveAgent,
   resumeAgent,
+  configureAgentForWork,
+  wakeupAgent,
+  listCompanyIssues,
+  promoteIssueToTodo,
   pollForFirstWorkProduct,
   createCompanyInvite,
   unarchivePaperclipCompany,
@@ -49,6 +53,29 @@ function sessionCompanyName(sessionId: string, companyName: string): string {
     .slice(0, 5)
     .toUpperCase();
   return `${prefix} · ${companyName}`;
+}
+
+/**
+ * Bring a freshly imported company to life. Imported agents arrive on a no-op
+ * "process" adapter (every run fails "missing command") and every seeded task
+ * sits in "backlog", so a new company does nothing on its own. Put every agent
+ * on the claude_local adapter with the heartbeat enabled, promote the seeded
+ * task(s) to "todo", and kick the agents so work starts immediately.
+ */
+async function activateCompany(paperclipCompanyId: string): Promise<void> {
+  const agents = await listCompanyAgents(paperclipCompanyId);
+  for (const agent of agents) {
+    await approveAgent(agent.id);
+    await resumeAgent(agent.id);
+    await configureAgentForWork(agent.id);
+  }
+  const issues = await listCompanyIssues(paperclipCompanyId);
+  for (const issue of issues) {
+    if (issue.status === "backlog") await promoteIssueToTodo(issue.id);
+  }
+  for (const agent of agents) {
+    await wakeupAgent(agent.id);
+  }
 }
 
 function makeSlug(name: string): string {
@@ -152,15 +179,10 @@ export async function GET(req: NextRequest) {
 
           send({ step: "approve", label: "Approving CEO and team…" });
           if (paperclipCompanyId) {
-            const agents = await listCompanyAgents(paperclipCompanyId);
-            for (const agent of agents) {
-              await approveAgent(agent.id);
-              await resumeAgent(agent.id);
-            }
+            await activateCompany(paperclipCompanyId);
           }
 
           send({ step: "heartbeat", label: "Firing first heartbeat…" });
-          // heartbeat is fired by approve+resume above; poll briefly to catch fast completions
           let mockFirstHeartbeatAt: Date | null = null;
           if (paperclipCompanyId) {
             const found = await pollForFirstWorkProduct(paperclipCompanyId, 5000);
@@ -487,17 +509,14 @@ export async function GET(req: NextRequest) {
           paperclipCompanyId = pcCompany.id;
         }
 
-        // Step 2: Approve agents
+        // Step 2: Approve agents + put them on a working adapter
         send({ step: "approve", label: "Approving CEO and team…" });
         if (paperclipCompanyId) {
-          const agents = await listCompanyAgents(paperclipCompanyId);
-          for (const agent of agents) {
-            await approveAgent(agent.id);
-            await resumeAgent(agent.id);
-          }
+          await activateCompany(paperclipCompanyId);
         }
 
-        // Step 3: Heartbeat — fired by approve+resume above; poll briefly for fast completions
+        // Step 3: Heartbeat — agents are configured + kicked by activateCompany
+        // above; poll briefly so a fast first work product is recorded.
         send({ step: "heartbeat", label: "Firing first heartbeat…" });
         let firstHeartbeatAt: Date | null = null;
         if (paperclipCompanyId) {
