@@ -12,6 +12,7 @@ export function ProvisioningClient({ sessionId, caseId }: { sessionId: string; c
   const [steps, setSteps] = useState<Step[]>([]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -19,18 +20,29 @@ export function ProvisioningClient({ sessionId, caseId }: { sessionId: string; c
       return;
     }
 
+    // Fresh attempt — clear any prior error/steps so a retry starts clean.
+    setError(null);
+    setSteps([]);
+    setDone(false);
+
     const url = `/api/provisioning/stream?session_id=${encodeURIComponent(sessionId)}&caseId=${encodeURIComponent(caseId)}`;
     const source = new EventSource(url);
+
+    // Tracks whether the stream reached a terminal state (done/error) so the
+    // onerror handler does not overwrite it with a generic message.
+    let settled = false;
 
     source.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data) as { step?: string; label?: string; done?: boolean; url?: string; error?: string };
         if (data.error) {
+          settled = true;
           setError(data.error);
           source.close();
           return;
         }
         if (data.done && data.url) {
+          settled = true;
           setDone(true);
           source.close();
           window.location.href = data.url;
@@ -46,12 +58,12 @@ export function ProvisioningClient({ sessionId, caseId }: { sessionId: string; c
 
     source.onerror = () => {
       source.close();
-      if (!done) setError("Connection lost. Please refresh.");
+      if (!settled) setError("Connection lost. Please try again.");
     };
 
     return () => source.close();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, caseId]);
+  }, [sessionId, caseId, retryNonce]);
 
   const allStepKeys = ["import", "approve", "heartbeat", "invite"];
 
@@ -61,7 +73,19 @@ export function ProvisioningClient({ sessionId, caseId }: { sessionId: string; c
         <h1 className="text-xl font-bold text-secondary-800">Setting up your AI company…</h1>
 
         {error ? (
-          <p className="text-sm text-red-600">{error}</p>
+          <div className="space-y-4">
+            <p className="text-sm text-red-600">{error}</p>
+            <button
+              type="button"
+              onClick={() => setRetryNonce((n) => n + 1)}
+              className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              Try again
+            </button>
+            <p className="text-xs text-secondary-400">
+              Still stuck? Email hello@usepaperclip.app and we&apos;ll sort it out — your payment is safe.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {allStepKeys.map((key) => {

@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
               ...(instanceUrl ? { instanceUrl } : {}),
               paperclipVersion: templateRef,
               ...(mockFirstHeartbeatAt ? { firstHeartbeatAt: mockFirstHeartbeatAt } : {}),
-              status: "running",
+              status: paperclipCompanyId ? "running" : "provisioning",
               updatedAt: new Date(),
             })
             .where(eq(companies.id, mockCompanyRow.id));
@@ -159,6 +159,20 @@ export async function GET(req: NextRequest) {
             try {
               await sendCompanyReadyEmail(userEmail, instanceUrl, companyName);
             } catch { /* Non-fatal */ }
+          }
+
+          // Engine configured but import produced no company — do not fake
+          // success. The user paid; the stub above stays "provisioning" so a
+          // retry (re-entering this page) reprovisions idempotently.
+          if (isPaperclipConfigured() && resolvedCaseId && !paperclipCompanyId) {
+            console.error("[provisioning/stream] mock import returned no company — engine unavailable");
+            send({
+              error:
+                "Your payment went through, but our setup engine is briefly unavailable. " +
+                "Nothing was lost — please click Try again in a moment.",
+            });
+            controller.close();
+            return;
           }
 
           const redirectUrl = instanceUrl ?? `${BASE_URL}/account`;
@@ -505,6 +519,22 @@ export async function GET(req: NextRequest) {
           } catch {
             // Non-fatal
           }
+        }
+
+        // The engine genuinely failed to create the company (import returned
+        // null even after retries). The user paid — payment, subscription and
+        // credits are already recorded, and the company stub above stays in
+        // "provisioning" status — so do NOT report a fake success. Surface a
+        // real error; re-entering this page retries provisioning idempotently.
+        if (!paperclipCompanyId) {
+          console.error("[provisioning/stream] import returned no company — engine unavailable");
+          send({
+            error:
+              "Your payment went through, but our setup engine is briefly unavailable. " +
+              "Nothing was lost — please click Try again in a moment.",
+          });
+          controller.close();
+          return;
         }
 
         const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://usepaperclip.app";

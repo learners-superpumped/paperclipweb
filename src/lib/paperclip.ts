@@ -8,22 +8,68 @@ const PAPERCLIP_API_KEY = process.env.PAPERCLIP_API_KEY ?? "";
 const PAPERCLIP_AUTH_EMAIL = process.env.PAPERCLIP_AUTH_EMAIL ?? "";
 const PAPERCLIP_AUTH_PASSWORD = process.env.PAPERCLIP_AUTH_PASSWORD ?? "";
 
+// ─── Transient-failure retry ───
+
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * fetch() wrapper that retries transient failures with exponential backoff.
+ * The paperclip engine runs as a single Fly machine; during a restart, redeploy,
+ * or brief overload it can return 5xx (or refuse the connection) for a few
+ * seconds. A paying customer's provisioning must not fail on that window, so we
+ * retry 5xx/429 responses and network errors before giving up.
+ */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  { retries = 4, baseDelayMs = 800 }: { retries?: number; baseDelayMs?: number } = {},
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (RETRYABLE_STATUS.has(res.status) && attempt < retries) {
+        await sleep(baseDelayMs * 2 ** attempt);
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err;
+      if (attempt >= retries) break;
+      await sleep(baseDelayMs * 2 ** attempt);
+    }
+  }
+  throw lastError ?? new Error("fetchWithRetry: retries exhausted");
+}
+
 // ─── Session Token Cache ───
 
 let cachedSessionCookie: string | null = null;
 let sessionExpiresAt = 0;
 
-async function getPaperclipSessionCookie(): Promise<string | null> {
+async function getPaperclipSessionCookie(forceRefresh = false): Promise<string | null> {
   if (!PAPERCLIP_AUTH_EMAIL || !PAPERCLIP_AUTH_PASSWORD) return null;
-  if (cachedSessionCookie && Date.now() < sessionExpiresAt) return cachedSessionCookie;
+  if (!forceRefresh && cachedSessionCookie && Date.now() < sessionExpiresAt) {
+    return cachedSessionCookie;
+  }
 
   const baseUrl = PAPERCLIP_API_URL.replace(/\/+$/, "");
-  const res = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Origin: baseUrl },
-    body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${baseUrl}/api/auth/sign-in/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: baseUrl },
+      body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
+      cache: "no-store",
+    });
+  } catch (err) {
+    console.error("[Paperclip] Session auth request failed after retries:", err);
+    return null;
+  }
 
   if (!res.ok) {
     console.error("[Paperclip] Session auth failed:", res.status);
@@ -98,29 +144,38 @@ async function paperclipFetch(
   }
 
   const url = `${PAPERCLIP_API_URL.replace(/\/+$/, "")}${path}`;
-
   const baseUrl = PAPERCLIP_API_URL.replace(/\/+$/, "");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Origin: baseUrl,
-  };
 
-  if (PAPERCLIP_API_KEY) {
-    headers.Authorization = `Bearer ${PAPERCLIP_API_KEY}`;
-  } else {
-    const cookie = await getPaperclipSessionCookie();
-    if (cookie) {
-      headers.Cookie = cookie;
+  async function attempt(forceAuthRefresh: boolean): Promise<Response> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Origin: baseUrl,
+    };
+    if (PAPERCLIP_API_KEY) {
+      headers.Authorization = `Bearer ${PAPERCLIP_API_KEY}`;
+    } else {
+      const cookie = await getPaperclipSessionCookie(forceAuthRefresh);
+      if (cookie) headers.Cookie = cookie;
     }
+    return fetchWithRetry(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    });
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-  });
+  let res = await attempt(false);
+
+  // Cookie-based auth only: if the engine restarted, the cached cookie is dead.
+  // The engine answers protected routes with 401 (sometimes 403) — drop the
+  // stale cookie, sign in fresh, and retry once.
+  if (!PAPERCLIP_API_KEY && (res.status === 401 || res.status === 403)) {
+    cachedSessionCookie = null;
+    sessionExpiresAt = 0;
+    res = await attempt(true);
+  }
 
   return res;
 }
