@@ -58,3 +58,32 @@ Stripe LIVE 전환 · webhook · price 검증 · mock/test 잔재 제거. 엔진
   - paperclip 엔진(fly)이 다운/미설정 → 별도 판단 필요
   - DB/AgentMail 자격증명 부재
 - 그 외는 자율 실행, 완료 시 보고.
+
+## Phase 1 진단 결과 (2026-05-20)
+
+코드 전수 점검 + 라이브 확인. 결론: 제품은 코드 레벨에서 production-quality.
+3/31 stale 문서가 시사한 것보다 훨씬 성숙하다.
+
+### 양호 (검증됨)
+- 랜딩 동작 (라이브). 3/31 크리티컬 버그(가입 `/api/auth/providers` 500) **해결됨** — 정상 JSON 반환.
+- 라이브 결제 경로 `/api/checkout/public` 정상 — `ensurePrice` 로 $29/mo idempotent 생성, `adaptive_pricing` off, prod 에서 live 키 사용.
+- webhook `/api/stripe/webhook` 성숙 — idempotency(`stripeEvents`), 트랜잭션, public/auth 양 경로, $9 balance grant, company stub.
+- auth(NextAuth v5 매직링크), DB 스키마(15 테이블) 견고. 빌드·타입 클린.
+- Stripe LIVE 키 vault 에 존재 (`sk_live_`/`pk_live_` — `vault/common/keys.json`).
+- runtime-mode: production 에서 test/mock 모드 강제 비활성 — 안전.
+
+### 코드 런칭 블로커: 없음
+
+### 발견 이슈 (punch list)
+- [MED] env 변수 분열: `NEXT_PUBLIC_BASE_URL`(checkout·provisioning 전체, 미정의) vs `NEXT_PUBLIC_APP_URL`(나머지). checkout/provisioning 리다이렉트가 항상 하드코딩 prod URL fallback — prod 정상, dev/preview 깨짐. → 한 이름으로 통일.
+- [MED] `npm run lint` 깨짐 — `next lint` deprecated + ESLint 설정 없음 → 인터랙티브 프롬프트 → quality gate 무력.
+- [LOW] dead `/api/stripe/checkout` 라우트 — 호출처 없음, 깨진 `getPriceId` fallback(`"price_pro_monthly"`) 사용.
+- [LOW] cruft: `constants.ts` dead `starter` 플랜, `stripe.ts` stale `TOPUP_PRICE_IDS`(`constants.ts` TOPUP 와 불일치), legacy `creditsBalance`/`creditsLimit` 컬럼.
+
+### 미검증 (Phase 3/5 에서)
+- Vercel prod env 가 실제 live `STRIPE_SECRET_KEY`·`STRIPE_WEBHOOK_SECRET` 보유 여부.
+- paperclip 엔진 production 가동 (`/api/paperclip/health` 401-gated).
+- 라이브 E2E 1회 완주, cron 4개, trial 플로우.
+
+### 잠재 하드 블로커
+- Stripe 계정 라이브 활성화 — `sk_live_` 키 보유 ≠ 계정이 실결제 수락 가능 상태(사업자·은행 인증). 미활성 시 실결제 실패. 활성화는 사용자만 가능.
