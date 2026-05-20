@@ -10,37 +10,67 @@ const PAPERCLIP_AUTH_PASSWORD = process.env.PAPERCLIP_AUTH_PASSWORD ?? "";
 
 // ─── Transient-failure retry ───
 
-const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+// The engine can blip for a few seconds during a restart or redeploy. These
+// bounds let a request survive a blip without hanging on a hard outage:
+// at most 2 retries, ~25s per attempt, and a few seconds of total backoff.
+const ENGINE_MAX_RETRIES = 2;
+const ENGINE_RETRY_BASE_MS = 600;
+const ENGINE_REQUEST_TIMEOUT_MS = 25_000;
+
+// A 5xx means the request reached the engine and may already have taken effect,
+// so it is only safe to retry for idempotent requests — retrying a company-import
+// POST could create a duplicate. 429 is a pre-side-effect rejection, safe to
+// retry for any method.
+const RETRYABLE_5XX = new Set([500, 502, 503, 504]);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function backoffMs(attempt: number): number {
+  const base = ENGINE_RETRY_BASE_MS * 2 ** attempt;
+  // Jitter (±50%) so concurrent callers don't retry in lockstep after an outage.
+  return Math.round(base * (0.5 + Math.random()));
+}
+
 /**
- * fetch() wrapper that retries transient failures with exponential backoff.
- * The paperclip engine runs as a single Fly machine; during a restart, redeploy,
- * or brief overload it can return 5xx (or refuse the connection) for a few
- * seconds. A paying customer's provisioning must not fail on that window, so we
- * retry 5xx/429 responses and network errors before giving up.
+ * fetch() wrapper that retries transient failures with jittered exponential
+ * backoff. The paperclip engine runs as a single Fly machine; during a restart,
+ * redeploy, or brief overload it can 5xx or refuse the connection for a few
+ * seconds. A paying customer's provisioning must not fail on that window.
+ *
+ * `idempotent` gates retry safety. A 5xx or network error on a non-idempotent
+ * request (a POST that creates a company) may have already taken effect on the
+ * engine, so retrying it could create a duplicate — those are NOT retried. 429
+ * is always safe (rejected before any side effect). A per-request timeout stops
+ * a hung socket from stalling the provisioning stream forever.
  */
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  { retries = 4, baseDelayMs = 800 }: { retries?: number; baseDelayMs?: number } = {},
+  { idempotent = false }: { idempotent?: boolean } = {},
 ): Promise<Response> {
   let lastError: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt <= ENGINE_MAX_RETRIES; attempt++) {
+    const canRetry = attempt < ENGINE_MAX_RETRIES;
     try {
-      const res = await fetch(url, init);
-      if (RETRYABLE_STATUS.has(res.status) && attempt < retries) {
-        await sleep(baseDelayMs * 2 ** attempt);
+      const res = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(ENGINE_REQUEST_TIMEOUT_MS),
+      });
+      const retryable =
+        res.status === 429 || (idempotent && RETRYABLE_5XX.has(res.status));
+      if (retryable && canRetry) {
+        await sleep(backoffMs(attempt));
         continue;
       }
       return res;
     } catch (err) {
+      // Network error or timeout. The request may have reached the engine, so
+      // retry only when the caller declared it idempotent.
       lastError = err;
-      if (attempt >= retries) break;
-      await sleep(baseDelayMs * 2 ** attempt);
+      if (!idempotent || !canRetry) break;
+      await sleep(backoffMs(attempt));
     }
   }
   throw lastError ?? new Error("fetchWithRetry: retries exhausted");
@@ -50,22 +80,42 @@ async function fetchWithRetry(
 
 let cachedSessionCookie: string | null = null;
 let sessionExpiresAt = 0;
+// Singleflight: collapses concurrent sign-ins into one request so an engine
+// restart (which invalidates the cookie for every in-flight call at once) does
+// not stampede the auth endpoint.
+let inflightSignIn: Promise<string | null> | null = null;
 
 async function getPaperclipSessionCookie(forceRefresh = false): Promise<string | null> {
   if (!PAPERCLIP_AUTH_EMAIL || !PAPERCLIP_AUTH_PASSWORD) return null;
   if (!forceRefresh && cachedSessionCookie && Date.now() < sessionExpiresAt) {
     return cachedSessionCookie;
   }
+  // An in-flight sign-in is already fresh, so joining it satisfies forceRefresh.
+  if (inflightSignIn) return inflightSignIn;
+  inflightSignIn = signInToPaperclip();
+  try {
+    return await inflightSignIn;
+  } finally {
+    inflightSignIn = null;
+  }
+}
 
+async function signInToPaperclip(): Promise<string | null> {
   const baseUrl = PAPERCLIP_API_URL.replace(/\/+$/, "");
   let res: Response;
   try {
-    res = await fetchWithRetry(`${baseUrl}/api/auth/sign-in/email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Origin: baseUrl },
-      body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
-      cache: "no-store",
-    });
+    // Sign-in is safe to retry: a duplicate session is harmless and we only
+    // keep the cookie from the successful response.
+    res = await fetchWithRetry(
+      `${baseUrl}/api/auth/sign-in/email`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: baseUrl },
+        body: JSON.stringify({ email: PAPERCLIP_AUTH_EMAIL, password: PAPERCLIP_AUTH_PASSWORD }),
+        cache: "no-store",
+      },
+      { idempotent: true },
+    );
   } catch (err) {
     console.error("[Paperclip] Session auth request failed after retries:", err);
     return null;
@@ -157,13 +207,21 @@ async function paperclipFetch(
       const cookie = await getPaperclipSessionCookie(forceAuthRefresh);
       if (cookie) headers.Cookie = cookie;
     }
-    return fetchWithRetry(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
+    // Only GET/HEAD are safe to retry on 5xx/network error; a POST/PATCH/DELETE
+    // may have already taken effect on the engine.
+    const method = (options.method ?? "GET").toUpperCase();
+    const idempotent = method === "GET" || method === "HEAD";
+    return fetchWithRetry(
+      url,
+      {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
       },
-    });
+      { idempotent },
+    );
   }
 
   let res = await attempt(false);

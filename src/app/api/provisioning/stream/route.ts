@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import {
   isPaperclipConfigured,
   importPaperclipCompany,
+  listPaperclipCompanies,
   listCompanyAgents,
   approveAgent,
   resumeAgent,
@@ -16,11 +17,38 @@ import {
 import { sendCompanyReadyEmail } from "@/lib/agentmail";
 import { findCase } from "@/lib/cases";
 import { isPaymentMockMode, isStripeTestMode } from "@/lib/runtime-mode";
+import { createHash } from "crypto";
 
 export const dynamic = "force-dynamic";
+// Provisioning runs import + agent approval + invite against the engine. Give it
+// generous headroom so a slow-but-working engine still emits a terminal frame
+// instead of being SIGKILLed mid-run.
+export const maxDuration = 300;
+
+// Shown when the engine genuinely failed to create the company. Re-entering the
+// page (Try again) reprovisions idempotently — see sessionCompanyName().
+const ENGINE_UNAVAILABLE_MESSAGE =
+  "Your payment went through, but our setup engine is briefly unavailable. " +
+  "Nothing was lost — please click Try again in a moment.";
 
 function sseFrame(data: Record<string, unknown>): string {
   return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+/**
+ * Deterministic engine company name for a checkout session. A retry of the SAME
+ * session yields the SAME name, so the import step can detect an already-created
+ * company and reuse it instead of creating a duplicate. The 5-char prefix also
+ * satisfies the engine's per-company issue_prefix uniqueness constraint.
+ */
+function sessionCompanyName(sessionId: string, companyName: string): string {
+  const prefix = createHash("sha256")
+    .update(sessionId)
+    .digest("base64")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, 5)
+    .toUpperCase();
+  return `${prefix} · ${companyName}`;
 }
 
 function makeSlug(name: string): string {
@@ -108,11 +136,15 @@ export async function GET(req: NextRequest) {
 
           if (isPaperclipConfigured() && resolvedCaseId) {
             const templateSource = `learners-superpumped/paperclip-templates/${resolvedCaseId}`;
+            const mockPaperclipCompanyName = sessionCompanyName(sessionId, companyName);
 
-            const mockRand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
-            const mockPaperclipCompanyName = `${mockRand3} · ${companyName}`;
-
-            const pcCompany = await importPaperclipCompany(templateSource, templateRef, mockPaperclipCompanyName);
+            // Idempotency: reuse a company a prior attempt for this session
+            // already created, instead of importing a duplicate.
+            let pcCompany =
+              (await listPaperclipCompanies()).find((c) => c.name === mockPaperclipCompanyName) ?? null;
+            if (!pcCompany) {
+              pcCompany = await importPaperclipCompany(templateSource, templateRef, mockPaperclipCompanyName);
+            }
             if (pcCompany?.id) {
               paperclipCompanyId = pcCompany.id;
             }
@@ -166,11 +198,7 @@ export async function GET(req: NextRequest) {
           // retry (re-entering this page) reprovisions idempotently.
           if (isPaperclipConfigured() && resolvedCaseId && !paperclipCompanyId) {
             console.error("[provisioning/stream] mock import returned no company — engine unavailable");
-            send({
-              error:
-                "Your payment went through, but our setup engine is briefly unavailable. " +
-                "Nothing was lost — please click Try again in a moment.",
-            });
+            send({ error: ENGINE_UNAVAILABLE_MESSAGE });
             controller.close();
             return;
           }
@@ -442,12 +470,18 @@ export async function GET(req: NextRequest) {
         // back to inline import using the caseId. This is acceptable for dev/demo deployments.
         const templateRef = hasValidRef ? rawTemplateRef : "";
 
-        // Prepend random 3-char prefix to avoid issue_prefix duplicate constraint on paperclip engine.
-        // Keep clean companyName for DB storage.
-        const rand3 = Math.random().toString(36).slice(2, 5).toUpperCase();
-        const paperclipCompanyName = `${rand3} · ${companyName}`;
+        // Deterministic per-session engine company name. Keep the clean
+        // companyName for DB storage.
+        const paperclipCompanyName = sessionCompanyName(sessionId, companyName);
 
-        const pcCompany = await importPaperclipCompany(templateSource, templateRef, paperclipCompanyName);
+        // Idempotency: if a prior attempt for this session already created the
+        // engine company (e.g. import succeeded but the response was lost, or
+        // the user clicked Try again), reuse it instead of creating a duplicate.
+        let pcCompany =
+          (await listPaperclipCompanies()).find((c) => c.name === paperclipCompanyName) ?? null;
+        if (!pcCompany) {
+          pcCompany = await importPaperclipCompany(templateSource, templateRef, paperclipCompanyName);
+        }
 
         if (pcCompany?.id) {
           paperclipCompanyId = pcCompany.id;
@@ -528,11 +562,7 @@ export async function GET(req: NextRequest) {
         // real error; re-entering this page retries provisioning idempotently.
         if (!paperclipCompanyId) {
           console.error("[provisioning/stream] import returned no company — engine unavailable");
-          send({
-            error:
-              "Your payment went through, but our setup engine is briefly unavailable. " +
-              "Nothing was lost — please click Try again in a moment.",
-          });
+          send({ error: ENGINE_UNAVAILABLE_MESSAGE });
           controller.close();
           return;
         }
