@@ -104,3 +104,46 @@ checkout·provisioning 의 `NEXT_PUBLIC_BASE_URL`(미정의) → `NEXT_PUBLIC_AP
 
 ### 남은 검증
 - 실 $29 결제 1건으로 결제 → webhook → 프로비저닝 전 구간 확정 (실 거래 필요 — 자율 실행 범위 밖).
+
+## 엔진 복구 + 핵심 플로우 E2E 검증 (2026-05-20)
+
+### 🔴→✅ 진짜 런칭 블로커: paperclip 엔진 다운
+결제 후 프로비저닝 E2E 중 발견. 엔진(`paperclip-engine-aicompany.fly.dev`)이
+`/api/auth/sign-in/email` 에 5xx 반환 → 프로비저닝이 회사를 못 만듦 → **결제한
+사용자가 아무것도 못 받음.** 두 단계로 원인 규명·수정:
+
+1. **Fly 볼륨 풀** — 임베디드 Postgres 가 `No space left on device` 로 부팅
+   실패 → 크래시루프 → 503. 볼륨 `vol_r683qw0nm8o7oeq4` 1GB→10GB 확장.
+2. **엔진 config 검증 실패** — 디스크 수정 후 `authenticated public exposure
+   requires auth.baseUrlMode=explicit` 로 재크래시. Fly secret
+   `PAPERCLIP_AUTH_BASE_URL_MODE=explicit` 추가 (`PAPERCLIP_PUBLIC_URL` 이
+   이미 있어 `publicBaseUrl` 충족).
+
+결과: 엔진 auth 200 + 쿠키 정상, 26개 회사 DB 보존, 보호 라우트 동작.
+
+### 프로비저닝 회복력 보강 (배포됨 `9635c45`)
+- `paperclip.ts`: `fetchWithRetry` — 5xx/429·네트워크 오류 지수 백오프 재시도.
+  엔진 재시작으로 쿠키 죽으면 401/403 시 재로그인 후 1회 재시도.
+- `provisioning/stream`: import 실패(`paperclipCompanyId` 없음) 시 `done:true`
+  대신 `error` 전송 — 가짜 성공 제거. 회사 stub 은 `provisioning` 상태로 남아
+  재진입 시 idempotent 재프로비저닝 (real·mock 양 경로).
+- `provisioning-client`: 에러 화면에 Try again 버튼.
+
+### 핵심 유저 플로우 E2E (test 모드, 실 브라우저)
+랜딩 → 템플릿(`ai-insta-influencer`) → 샘플 태스크(캡션 3개 생성) → "Launch
+for $29/month" → Stripe 테스트 결제(`cs_test_`, 카드 4242) → 프로비저닝
+스트림(11.9s, 무에러) → 엔진 회사 생성 → invite URL.
+
+DB 검증: user=pro, company=running (`paperclip_company_id`+`instance_url`),
+subscription=active (`sub_1TZ5Im…`), $9 크레딧 grant. **전 구간 동작 확정.**
+
+### 알려진 후속 (런칭 블로커 아님)
+- Vercel `development` env 가 live Stripe 키 보유 → 로컬 dev footgun.
+  `.env.local` 은 test 모드로 수정함(로컬). dev env 자체를 test 키로 정리 권장.
+- 엔진 임베디드 Postgres 단일 Fly 볼륨 — 디스크 풀 재발 가능. 10GB 확보로
+  당장은 여유. 장기적으로 디스크 사용량 모니터링/알람 권장.
+
+### 결론
+**제품 핵심 플로우 동작 확정, production 라이브.** usepaperclip.app 가입→결제
+→프로비저닝→작동하는 AI 회사 인스턴스까지 검증됨. 실 LIVE 결제 1건만 사용자가
+원할 때 확인하면 100%.
