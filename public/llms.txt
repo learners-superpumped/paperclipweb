@@ -1,0 +1,63 @@
+# Paperclip Web Panel (페이퍼클립 웹 패널)
+> A customer billing panel and onboarding platform for Paperclip, an AI-powered agent workforce simulator. It enables users to select a YouTube-validated business workforce template, test it in an interactive sandboxed trial, purchase a Pro subscription ($29/mo for 1 instance + $9 LLM credits), visualize real-time provisioning via Server-Sent Events, and manage dollar balances, top-ups, and instance access.
+
+## Site Structure
+- `/` — Marketing landing page. Fetches dynamic GitHub repository stars for `paperclipai/paperclip` and lists the 5 YouTube-validated workforce templates.
+- `/login` — Magic-link email login page.
+- `/signup` — Magic-link email signup page.
+- `/onboarding` — Onboarding flow gateway; routes users to active setup steps.
+- `/onboarding/[caseId]` — Interactive template trial page. Allows running a free sandboxed trial task (mocked or real Claude Haiku generation) and prompts a "Launch for $29/mo" Stripe subscription upgrade once results are rendered.
+- `/onboarding/redirect` — Post-onboarding intermediate redirect route.
+- `/provisioning` — Real-time provisioning screen. Visualizes the deployment process (Import, Approve, Heartbeat, Invite) by listening to an SSE stream, featuring a retry state machine for idempotency.
+- `/account` — Main customer panel. Renders prepaid LLM dollar balance, subscription controls, and action buttons to access the workforce, top up credits, update credit cards, or cancel plans.
+- `/pricing` — Subscription plan overview and comparison.
+- `/i/[slug]` — Deterministic redirection path mapping to the active company instance's external URL (running on the paperclip engine).
+
+## API Endpoints
+- `POST/GET /api/auth/[...nextauth]` — Authentication endpoint handled by Auth.js (NextAuth v5 beta) for email magic links and session validation.
+- `POST /api/user/pre-register` — Stores temporary signup metadata (name, target caseId) before email verification completes.
+- `GET/PATCH /api/user` — Fetches or updates current user profile metadata.
+- `POST /api/onboarding/start-mock-task` — Excutes a sandboxed trial task. Rate-limited to 8 runs/hour per client IP with a 6-hour in-memory cache. Falls back to static preset results from `src/lib/cases.ts` if the Anthropic API key is absent or the LLM call fails.
+- `POST /api/checkout/public` — Initiates the Stripe Checkout session for a $29/mo Pro subscription plan. Returns a mock URL (`/checkout/mock-success`) when payment mock mode is active.
+- `POST /api/checkout/topup` — Purchases LLM dollar credits. In live mode, initiates a Stripe one-time payment. In mock or test mode, immediately updates the database to add `$4.50` LLM credit to the balance.
+- `POST /api/checkout/mock-pay` — Mocks payment validation and activates the Pro subscription in test/local environments.
+- `POST /api/checkout/mock-topup` — Mocks a successful top-up transaction, instantly adding credit balance in local test configurations.
+- `GET /api/provisioning/stream` — SSE (Server-Sent Events) endpoint streaming provisioning progress steps (`import` -> `approve` -> `heartbeat` -> `invite` -> `done`). Safely restores archived companies if the user re-subscribes within 30 days.
+- `POST /api/proxy/ai` — Secured Anthropic and OpenAI API proxy. Uses PostgreSQL advisory locks serialized per `userId` to prevent race conditions during parallel credit deductions. Billed rates are calculated based on token counts and debited from the user's dollar balance in real time.
+- `POST /api/stripe/webhook` — Stripe webhook integration listener handling successful checkouts, subscription updates, deletions, and refunds.
+- `POST /api/stripe/portal` — Generates a Stripe Customer Portal redirection URL to update payment methods and billing invoices.
+- `POST /api/subscription/cancel` — Cancels the user's active Stripe subscription (archiving the running company in 30 days).
+- `GET/POST /api/companies` — Lists or creates company records for the authenticated user.
+- `GET/PATCH/DELETE /api/companies/[id]` — Retrieves, updates, or deletes a specific company instance.
+- `GET /api/companies/[id]/usage` — Fetches aggregated resource usage, token stats, and credit consumption details.
+- `GET /api/credits/balance` — Returns the user's current prepaid dollar credit balance and limit.
+- `GET /api/github/stars` — Pulls live Github stargazers count for social proof counters.
+- `GET/POST /api/cron/cost-poller` — Background cron polling resource consumption and token expenditures from running paperclip engines.
+- `GET/POST /api/cron/destroy-archived` — Cron job purging archived companies whose 30-day retention periods have expired.
+- `GET/POST /api/cron/monthly-summary` — Prepares and dispatches monthly token/credit usage digests.
+- `GET/POST /api/drip/send` — Worker process executing scheduled drip email dispatches (Day 0 through Day 3 sequence).
+
+## Datasets / Core Concepts
+- `Users`: Stores account settings, billing plans (`free`, `starter`, `pro`), subscription statuses, and email confirmations.
+- `Companies`: Reprents Paperclip instances (AI workforces running on the simulator engine). Key fields: `userId`, deterministic `slug`, `caseId`, `status` (`provisioning`, `running`, `stopped`, `archived`, `deleted`, `error`), version hash `paperclipVersion`, `instanceUrl`, `firstHeartbeatAt`, and soft-deletion timestamp `deleteAfter`.
+- `Balances`: Pre-funded dollar-based credit accounts (precision 10, scale 4) used to pay for Anthropic and OpenAI API tokens consumed by simulated employees.
+- `Balance Movements`: Detailed ledger auditing all balance changes (`kind`: `grant`, `topup`, `spend`, `refund` with `dollarsDelta` amount).
+- `Tasks`: Simulated tasks assigned by the user to virtual employees inside their company workspace (`status`: `running`, `done`, `failed`, outputs, tokens).
+- `Cost Events Mirror`: Synced log of backend engine token consumption events per agent slug.
+- `Drip Emails`: Time-based sequence (Day 0, 1, 2, 3) scheduled to users to increase retention.
+- `Case Templates`: 5 prebuilt workforce configurations with distinct employees, titles, bios, and tasks:
+  1. **Solo Influencer Inc. (📸)** — Instagram daily posts and auto-DM replies. Staff: Mina (CEO), Jay (Content Designer), Eun (Caption Writer).
+  2. **Passive Income LLC (📝)** — Article writing SEO farm. Staff: Hyun (CEO), Tara (SEO Strategist), Sangwoo (Content Writer).
+  3. **Newsletter Empire (✉️)** — Twice-weekly curated newsletter. Staff: Soo (CEO), Min (Content Curator), Jin (Email Designer).
+  4. **Shorts Factory (🎬)** — 3 daily short scripts and reels. Staff: Beom (CEO), Nara (Trend Scout), Doori (Video Scripter).
+  5. **CS Bot Co. (💬)** — Outsourced customer support email automation. Staff: Hana (CEO), Joon (CS Manager), Vi (Email Responder).
+
+## Content
+- **Wow Trial Simulator**: Onboarding sandboxed console where users can prompt virtual companies and preview immediate outputs from Claude Haiku (cached or live-generated) before entering a checkout gate.
+- **Deterministic Provisioning Steps**: Resilient template setup pipeline that converts GitHub repository templates or inline JSON into fully configured workspaces with active heartbeats and approved virtual staff.
+- **Gstack Skills**: Pre-packaged custom agent prompts automatically registered inside deployed instances to enable Garry Tan YC-style Office Hours, market research, and pivot brainstorming.
+
+## Technical
+- Built with: Next.js 15, React 19, Auth.js (NextAuth v5 beta), Drizzle ORM, Neon Serverless Postgres, Stripe, Amplitude Analytics, Recharts, Tailwind CSS, TypeScript
+- Data format: PostgreSQL relational tables, JSON REST APIs, Server-Sent Events (SSE) stream
+- Language: English (en), Korean (ko) (system comments, onboarding strings)
