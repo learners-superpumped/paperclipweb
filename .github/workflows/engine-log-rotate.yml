@@ -19,8 +19,8 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           echo "--- before ---"
-          fly ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
-          fly ssh console -a paperclip-engine-aicompany -C "truncate -s 0 /paperclip/instances/default/logs/server.log"
+          flyctl ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
+          flyctl ssh console -a paperclip-engine-aicompany -C "truncate -s 0 /paperclip/instances/default/logs/server.log"
           echo "--- after ---"
-          fly ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
+          flyctl ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
           echo "engine server.log rotated"
