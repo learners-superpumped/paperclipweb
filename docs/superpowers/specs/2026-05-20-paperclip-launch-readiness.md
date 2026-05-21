@@ -189,3 +189,38 @@ provisioning/stream 에 `activateCompany` 헬퍼 추가 (real·mock 공통):
 ### 최종 결론
 **유저가 paperclip 으로 실제 서비스를 디벨롭할 수 있음 — 확정.** 가입→결제
 →프로비저닝→작동하는 AI 직원이 자율적으로 태스크 수행까지 전 구간 검증.
+
+## 운영 잔여 정리 (2026-05-21)
+
+위 두 "알려진 후속" 섹션의 잔여 항목을 전부 처리.
+
+### ✅ Vercel 비-prod Stripe 키
+점검 결과 live 차징 키(`STRIPE_SECRET_KEY`·`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`)는
+이미 Production 환경 전용 — 비-prod 유출 없음. footgun 완전 차단을 위해 Development·
+Preview 환경에 Stripe **테스트** 키를 명시 추가. 이제 `vercel env pull`·preview 배포가
+test 모드로 동작해 실결제 위험 0.
+
+### ✅ 엔진 server.log 무한 증가
+server.log 가 805M 까지 증가(로테이션 없음 → 디스크 풀 재발 요인). 즉시 truncate
+(`/paperclip` 볼륨 15%→7%). 영구 차단을 위해 `.github/workflows/engine-log-rotate.yml`
+추가 — 매월 1일 03:00 KST 에 GitHub Actions 가 `flyctl ssh` 로 server.log 를 truncate.
+워크플로 수동 실행으로 동작 검증 완료. 디스크 모니터링 권고도 이로써 해소(증가
+요인이 로그였음).
+
+### ✅ 아카이브 테스트 회사 24개 hard-delete
+엔진 `DELETE /api/companies/:id` 가 500 으로 실패하던 24개 아카이브 회사를 전부 삭제.
+엔진 임베디드 Postgres 에 직접 연결해 단일 트랜잭션에서 `session_replication_role=
+replica` 로 FK 트리거를 끈 뒤, 회사를 FK 참조하는 자식 테이블 66개(383K행, 대부분
+activity_log)를 정리하고 회사 24행 삭제. 엔진 회사 수 24→0 (API 재확인).
+
+### 🐛 상류 버그: 엔진 deleteCompany cascade 불완전
+위 작업 중 발견. 엔진 `/app/server/src/services/companies.ts` 의 `remove()` 는 회사
+자식 테이블을 23개만 삭제하지만 실제로는 66개가 회사를 FK 참조 —
+`budget_policies`·`agent_config_revisions`·`environments`·`company_skills` 등 다수
+누락, `cost_events`·`activity_log` 는 `heartbeat_runs` 뒤에 위치(순서 오류). 결과적으로
+**모든 회사 삭제가 FK 위반 500 으로 실패**. 실 유저가 회사를 삭제하면 재현됨.
+`paperclipai` 상류 수정 대상 (호스팅 인스턴스는 위 스크립트로 우회 처리 완료).
+
+### 최종 상태
+런칭 readiness 잔여 항목 0. 제품·결제·프로비저닝·에이전트 동작에 더해 운영 인프라
+(로그 로테이션·환경 키 위생·테스트 데이터 정리)까지 마감.
