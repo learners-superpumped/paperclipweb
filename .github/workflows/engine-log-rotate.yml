@@ -1,0 +1,26 @@
+name: engine-log-rotate
+
+# paperclip 엔진(Fly app: paperclip-engine-aicompany)은 server.log 를 단일
+# 파일에 로테이션 없이 기록한다. Fly 볼륨이 차면 임베디드 Postgres 까지
+# 함께 다운된다 (2026-05-20 실제 장애). 매월 1일 truncate 로 무한 증가를 차단.
+on:
+  schedule:
+    - cron: "0 18 1 * *" # 매월 1일 18:00 UTC = KST 03:00 (digest cron 시간대 회피)
+  workflow_dispatch:
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Truncate engine server.log
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          echo "--- before ---"
+          fly ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
+          fly ssh console -a paperclip-engine-aicompany -C "truncate -s 0 /paperclip/instances/default/logs/server.log"
+          echo "--- after ---"
+          fly ssh console -a paperclip-engine-aicompany -C "df -h /paperclip"
+          echo "engine server.log rotated"
