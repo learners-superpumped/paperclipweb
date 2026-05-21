@@ -62,8 +62,8 @@ function YouTubeCase({ url, title }: { url: string; title: string }) {
               className="h-full w-full object-cover transition group-hover:scale-[1.04]"
             />
             <span className="absolute inset-0 flex items-center justify-center bg-black/15 transition group-hover:bg-black/25">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md">
-                <svg viewBox="0 0 24 24" className="ml-0.5 h-3.5 w-3.5 fill-primary" aria-hidden>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-md transition group-hover:scale-110">
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5 fill-primary" aria-hidden>
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </span>
@@ -75,7 +75,7 @@ function YouTubeCase({ url, title }: { url: string; title: string }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 block text-[11px] leading-snug text-secondary-700 hover:text-primary line-clamp-2"
+        className="mt-2 block text-xs leading-snug text-secondary-700 hover:text-primary line-clamp-2"
       >
         {title}
       </a>
@@ -92,60 +92,61 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
             5 AI businesses people actually built on YouTube
           </h2>
           <p className="mt-3 text-secondary-700">
-            Try the template first. Launch the real company only when it feels right.
+            Watch the real cases — then copy the company with one click.
           </p>
         </div>
 
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          data-testid="case-grid"
-        >
+        <div className="space-y-6" data-testid="case-grid">
           {cases.map((c) => (
             <article
               key={c.id}
               data-testid={`case-card-${c.id}`}
-              className="rounded-2xl border border-secondary-200 bg-white p-6 flex flex-col hover:shadow-lg hover:border-primary/40 transition"
+              className="rounded-2xl border border-secondary-200 bg-white p-6 sm:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8 hover:shadow-lg hover:border-primary/40 transition"
             >
-              <div className="text-3xl mb-3" aria-hidden>
-                {c.emoji}
-              </div>
-              <div className="text-xs font-medium text-primary uppercase tracking-wide mb-1">
-                {c.oneLiner}
-              </div>
-              <div className="text-lg font-semibold text-secondary-800 mb-2">
-                {c.company}
-              </div>
-              <div className="text-sm text-secondary-700 mb-3">
-                {c.mission}
-              </div>
-              <div className="text-xs text-secondary-700 space-y-1 mb-4">
-                <div>
-                  <span className="font-medium text-secondary-800">Team</span>:{" "}
-                  {c.employees.map((e) => e.role).join(", ")}
+              <div className="lg:w-72 lg:flex-shrink-0 flex flex-col">
+                <div className="text-3xl mb-3" aria-hidden>
+                  {c.emoji}
                 </div>
-                <div>
-                  <span className="font-medium text-secondary-800">
-                    Sample task
-                  </span>
-                  : {c.sampleTask.title}
+                <div className="text-xs font-medium text-primary uppercase tracking-wide mb-1">
+                  {c.oneLiner}
                 </div>
-              </div>
-              <div className="mt-auto space-y-2">
+                <div className="text-lg font-semibold text-secondary-800 mb-2">
+                  {c.company}
+                </div>
+                <div className="text-sm text-secondary-700 mb-3">
+                  {c.mission}
+                </div>
+                <div className="text-xs text-secondary-700 space-y-1 mb-5">
+                  <div>
+                    <span className="font-medium text-secondary-800">Team</span>:{" "}
+                    {c.employees.map((e) => e.role).join(", ")}
+                  </div>
+                  <div>
+                    <span className="font-medium text-secondary-800">
+                      Sample task
+                    </span>
+                    : {c.sampleTask.title}
+                  </div>
+                </div>
                 <Link
                   href={`/onboarding/${c.id}`}
-                  className={cn(buttonVariants({ size: "sm" }), "block text-center w-full cursor-pointer")}
+                  className={cn(
+                    buttonVariants({ size: "sm" }),
+                    "lg:mt-auto block text-center w-full cursor-pointer",
+                  )}
                 >
                   Try this template
                 </Link>
-                <div className="space-y-2 pt-2 border-t border-secondary-100">
-                  <div className="text-[11px] text-secondary-700">
-                    YouTube cases
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {c.youtube.map((y, i) => (
-                      <YouTubeCase key={i} url={y.url} title={y.title} />
-                    ))}
-                  </div>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-secondary-500">
+                  Real cases on YouTube
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {c.youtube.map((y, i) => (
+                    <YouTubeCase key={i} url={y.url} title={y.title} />
+                  ))}
                 </div>
               </div>
             </article>
