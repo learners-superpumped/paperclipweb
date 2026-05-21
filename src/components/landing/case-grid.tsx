@@ -1,9 +1,87 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import type { CaseTemplate } from "@/lib/cases";
+
+function youtubeId(url: string): string | null {
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+  );
+  return m ? m[1] : null;
+}
+
+/**
+ * A YouTube case rendered as a thumbnail facade. Clicking the thumbnail swaps
+ * in the real player inline — no iframe is loaded until the user asks for it,
+ * so the landing page stays fast.
+ */
+function YouTubeCase({ url, title }: { url: string; title: string }) {
+  const [playing, setPlaying] = useState(false);
+  const id = youtubeId(url);
+
+  if (!id) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-secondary-700 underline decoration-secondary-300 hover:decoration-primary"
+      >
+        ▶ {title}
+      </a>
+    );
+  }
+
+  return (
+    <div>
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-secondary-100">
+        {playing ? (
+          <iframe
+            className="absolute inset-0 h-full w-full"
+            src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`}
+            title={title}
+            loading="lazy"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPlaying(true)}
+            aria-label={`Play video: ${title}`}
+            className="group absolute inset-0 h-full w-full cursor-pointer"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
+              alt={title}
+              loading="lazy"
+              className="h-full w-full object-cover transition group-hover:scale-[1.04]"
+            />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/15 transition group-hover:bg-black/25">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md">
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-3.5 w-3.5 fill-primary" aria-hidden>
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            </span>
+          </button>
+        )}
+      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1 block text-[11px] leading-snug text-secondary-700 hover:text-primary line-clamp-2"
+      >
+        {title}
+      </a>
+    </div>
+  );
+}
 
 export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
   return (
@@ -59,21 +137,15 @@ export function CaseGrid({ cases }: { cases: CaseTemplate[] }) {
                 >
                   Try this template
                 </Link>
-                <div className="space-y-1 pt-2 border-t border-secondary-100">
-                  <div className="text-[11px] text-secondary-700 mb-1">
+                <div className="space-y-2 pt-2 border-t border-secondary-100">
+                  <div className="text-[11px] text-secondary-700">
                     YouTube cases
                   </div>
-                  {c.youtube.map((y, i) => (
-                    <a
-                      key={i}
-                      href={y.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center py-1.5 text-xs text-secondary-700 underline decoration-secondary-300 hover:decoration-primary min-h-[24px]"
-                    >
-                      ▶ {y.title}
-                    </a>
-                  ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {c.youtube.map((y, i) => (
+                      <YouTubeCase key={i} url={y.url} title={y.title} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </article>
