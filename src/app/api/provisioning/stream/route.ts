@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
           }
 
           // Full provisioning for mock session.
-          let companyName = mockCompanyRow.name ?? "My AI Company";
+          const companyName = mockCompanyRow.name ?? "My AI Company";
           const resolvedCaseId = mockCompanyRow.caseId ?? caseId ?? "";
           let paperclipCompanyId: string | undefined;
           let instanceUrl: string | undefined;

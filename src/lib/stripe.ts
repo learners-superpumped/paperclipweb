@@ -25,7 +25,7 @@ export function getStripe(): Stripe {
 }
 
 // Plan to Stripe Price ID mapping. spec.md ## 6: 단일 플랜 Pro 만.
-export function getPriceId(plan: "pro"): string {
+export function getPriceId(_plan: "pro"): string {
   return process.env.STRIPE_PRO_PRICE_ID || "price_pro_monthly";
 }
 

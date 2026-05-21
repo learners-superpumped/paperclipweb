@@ -54,7 +54,7 @@ export default function CheckoutSuccessClient() {
     // Delay first poll by 1s so the provisioning spinner is always visible on load.
     const initialTimer = setTimeout(() => { void poll(); }, 1000);
     return () => { clearInterval(interval); clearTimeout(initialTimer); };
-  }, [sessionId, caseId, router]);
+  }, [sessionId, caseId, slug, router]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white px-6">

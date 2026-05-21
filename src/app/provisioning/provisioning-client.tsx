@@ -62,7 +62,7 @@ export function ProvisioningClient({ sessionId, caseId }: { sessionId: string; c
     };
 
     return () => source.close();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [sessionId, caseId, retryNonce]);
 
   const allStepKeys = ["import", "approve", "heartbeat", "invite"];

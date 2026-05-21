@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 // Vercel cron: runs on the 1st of every month (see vercel.json).
 // Also callable manually: POST with { email } to send for a specific user.
 // Protected by CRON_SECRET bearer token.
-export async function GET(req: Request) {
+export async function GET() {
   const headersList = await headers();
   const auth = headersList.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

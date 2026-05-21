@@ -93,6 +93,7 @@ const config: Config = {
       },
     },
   },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- tailwindcss-animate is CJS-only
   plugins: [require("tailwindcss-animate")],
 };
 

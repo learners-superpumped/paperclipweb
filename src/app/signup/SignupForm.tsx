@@ -116,7 +116,7 @@ export default function SignupForm({ caseId }: Props) {
             <p className="mt-2 text-sm text-secondary-700">
               We sent a sign-in link to{" "}
               <span className="font-medium text-secondary-800">{email}</span>.
-              One click and you're in.
+              One click and you&apos;re in.
             </p>
             <Button
               variant="ghost"

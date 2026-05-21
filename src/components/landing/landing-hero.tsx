@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { trackCTAClick } from "@/lib/analytics";
+import Link from "next/link";
 
 export function LandingHero() {
   return (
@@ -21,7 +22,7 @@ export function LandingHero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3">
-            <a href="/#cases" data-testid="cta-start">
+            <Link href="/#cases" data-testid="cta-start">
               <Button
                 size="xl"
                 className="gap-2 px-10 py-6 text-lg"
@@ -30,7 +31,7 @@ export function LandingHero() {
                 Start now
                 <ArrowRight className="h-5 w-5" />
               </Button>
-            </a>
+            </Link>
             <p className="text-sm text-secondary-700">
               Pick a case below &gt; run a sample task &gt; launch for $29/month
             </p>
