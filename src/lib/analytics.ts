@@ -1,34 +1,56 @@
 "use client";
 
 import * as amplitude from "@amplitude/analytics-browser";
+import posthog from "posthog-js";
 
 const SERVICE_NAME = "paperclipweb";
 
 let initialized = false;
 
 export const initAmplitude = () => {
-  if (
-    typeof window !== "undefined" &&
-    process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY &&
-    !initialized
-  ) {
-    amplitude.init(process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY, {
-      defaultTracking: {
+  if (typeof window === "undefined" || initialized) return;
+
+  const amplitudeKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY?.trim();
+  if (amplitudeKey) {
+    amplitude.init(amplitudeKey, {
+      autocapture: {
+        attribution: true,
+        elementInteractions: true,
+        pageViews: true,
         sessions: true,
-        pageViews: false,
-        formInteractions: false,
-        fileDownloads: false,
+        formInteractions: true,
+        fileDownloads: true,
       },
     });
-    initialized = true;
+    amplitude.setGroup("service", SERVICE_NAME);
   }
+
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+  if (posthogKey) {
+    posthog.init(posthogKey, {
+      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      defaults: "2026-01-30",
+      person_profiles: "identified_only",
+      autocapture: true,
+      capture_pageview: true,
+    });
+    posthog.register({ service: SERVICE_NAME });
+    posthog.group("service", SERVICE_NAME);
+  }
+
+  initialized = true;
 };
+
+// 기존 호출처 호환을 위해 initAmplitude 이름 유지. 새 코드는 initAnalytics 사용.
+export const initAnalytics = initAmplitude;
 
 export const trackEvent = (
   name: string,
   properties?: Record<string, unknown>
 ) => {
-  amplitude.track(name, { service: SERVICE_NAME, ...properties });
+  const payload = { service: SERVICE_NAME, ...properties };
+  amplitude.track(name, payload);
+  try { posthog.capture(name, payload); } catch { /* swallow */ }
 };
 
 // --- Page tracking ---
@@ -183,4 +205,7 @@ export const identifyUser = (userId: string, traits?: Record<string, unknown>) =
     });
     amplitude.identify(identifyEvent);
   }
+  try {
+    posthog.identify(userId, traits as Record<string, unknown> | undefined);
+  } catch { /* swallow */ }
 };
