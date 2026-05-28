@@ -169,7 +169,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { model, messages, instance_id } = parsed.data;
+    const { model: requestedModel, messages, instance_id } = parsed.data;
+    // Cost-control coercion: all Anthropic traffic runs on claude-sonnet-4-6.
+    // Per-call $1-5 opus → ~$0.20 sonnet 으로. 단가 1/5.
+    const model = getProviderFromModel(requestedModel) === "anthropic" ? "claude-sonnet-4-6" : requestedModel;
     const [dbUser] = await db()
       .select({
         id: users.id,

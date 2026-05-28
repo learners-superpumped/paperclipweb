@@ -64,10 +64,7 @@ function trialModelCandidates(): string[] {
       [
         workingTrialModel,
         process.env.ANTHROPIC_TRIAL_MODEL,
-        "claude-3-haiku-20240307",
-        "claude-3-5-haiku-20241022",
-        "claude-sonnet-4-20250514",
-        "claude-3-7-sonnet-20250219",
+        "claude-sonnet-4-6",
       ].filter((model): model is string => Boolean(model))
     )
   );
