@@ -12,6 +12,19 @@ export const initAmplitude = () => {
 
   const amplitudeKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY?.trim();
   if (amplitudeKey) {
+    // 모든 이벤트(autocapture 포함)에 service 자동 주입 — init 이전에 등록해야 첫 이벤트부터 태깅된다.
+    amplitude.add({
+      name: "service-tag",
+      type: "enrichment",
+      setup: async () => undefined,
+      execute: async (event) => {
+        event.event_properties = {
+          ...(event.event_properties ?? {}),
+          service: SERVICE_NAME,
+        };
+        return event;
+      },
+    });
     amplitude.init(amplitudeKey, {
       autocapture: {
         attribution: true,
